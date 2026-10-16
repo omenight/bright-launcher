@@ -6,10 +6,13 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,11 +25,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,6 +41,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +56,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.util.Consumer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.omenight.bright.HomeState
 import com.omenight.bright.HomeViewModel
@@ -51,7 +65,7 @@ import com.omenight.bright.R
 import com.omenight.bright.ui.glass.LocalBackdrop
 import com.omenight.bright.ui.glass.backdrop
 import com.omenight.bright.ui.glass.glass
-import com.omenight.bright.ui.glass.rememberDawnBackdrop
+import com.omenight.bright.ui.glass.BackdropEngine
 import com.omenight.bright.ui.theme.BrightColors
 
 const val Columns = 5
@@ -61,29 +75,47 @@ val ScreenPadding = 56.dp
 private val DockMargin = 40.dp
 private val DockPadding = 28.dp
 private val DockCorner = 30.dp
+private val ClockInset = 16.dp
 
 @Composable
 fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val backdrop = rememberDawnBackdrop()
+    val wallpaper by viewModel.wallpaper.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val backdrop by remember { BackdropEngine.start(context) }.collectAsStateWithLifecycle()
     var allAppsOpen by rememberSaveable { mutableStateOf(false) }
+    var settingsOpen by rememberSaveable { mutableStateOf(false) }
     // Set once All apps has been closed, so home focuses its tile instead of the first favorite
     var returnedFromAllApps by remember { mutableStateOf(false) }
+    // Bumped when an overlay closes, so home takes focus back
+    var homeFocusEpoch by remember { mutableIntStateOf(0) }
     val closeAllApps = {
         if (allAppsOpen) returnedFromAllApps = true
         allAppsOpen = false
+    }
+    val closeSettings = {
+        if (settingsOpen) {
+            BackdropEngine.preview(null)
+            settingsOpen = false
+            homeFocusEpoch++
+        }
     }
 
     // Pressing Home while Bright is already in front arrives as a new intent
     val activity = LocalActivity.current as? ComponentActivity
     DisposableEffect(activity) {
-        val listener = Consumer<Intent> { closeAllApps() }
+        val listener = Consumer<Intent> {
+            closeSettings()
+            closeAllApps()
+        }
         activity?.addOnNewIntentListener(listener)
         onDispose { activity?.removeOnNewIntentListener(listener) }
     }
 
-    // A launcher is the bottom of the stack, so Back only ever closes All apps
+    // A launcher is the bottom of the stack, so Back only ever closes All apps or settings
     BackHandler { closeAllApps() }
+    // Registered later, so it wins while the panel is open
+    BackHandler(enabled = settingsOpen) { closeSettings() }
 
     val sheet by animateFloatAsState(if (allAppsOpen) 1f else 0f, tween(240), label = "sheet")
 
@@ -92,7 +124,14 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
             Modifier
                 .fillMaxSize()
                 // Read inside the lambda so the fade only redraws, never recomposes
-                .backdrop(backdrop, fallback = BrightColors.Background) { sheet },
+                .backdrop(backdrop, fallback = BrightColors.Background) { sheet }
+                .onPreviewKeyEvent { event ->
+                    val menu = event.key == Key.Menu && event.type == KeyEventType.KeyUp && !allAppsOpen
+                    if (menu) {
+                        if (settingsOpen) closeSettings() else settingsOpen = true
+                    }
+                    menu
+                },
         ) {
             AnimatedContent(
                 targetState = allAppsOpen,
@@ -106,9 +145,24 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
                         state = state,
                         viewModel = viewModel,
                         focusAllApps = returnedFromAllApps,
+                        focusEpoch = homeFocusEpoch,
                         onOpenAllApps = { allAppsOpen = true },
+                        onOpenSettings = { settingsOpen = true },
                     )
                 }
+            }
+
+            AnimatedVisibility(
+                visible = settingsOpen,
+                enter = fadeIn(tween(220)) + slideInHorizontally(tween(260)) { it / 5 },
+                exit = fadeOut(tween(160)) + slideOutHorizontally(tween(200)) { it / 5 },
+                modifier = Modifier.align(Alignment.CenterEnd),
+            ) {
+                SettingsPanel(
+                    current = wallpaper,
+                    onPreview = BackdropEngine::preview,
+                    onSelect = viewModel::setWallpaper,
+                )
             }
         }
     }
@@ -119,19 +173,35 @@ private fun HomeScreen(
     state: HomeState,
     viewModel: HomeViewModel,
     focusAllApps: Boolean,
+    focusEpoch: Int,
     onOpenAllApps: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     val firstFavorite = remember { FocusRequester() }
     val allAppsTile = remember { FocusRequester() }
     val initialFocus = if (focusAllApps || state.favorites.isEmpty()) allAppsTile else firstFavorite
-    RequestFocusOnEnter(initialFocus, state.loaded)
+    RequestFocusOnEnter(initialFocus, state.loaded, key = focusEpoch)
 
     Box(Modifier.fillMaxSize()) {
-        Clock(
-            Modifier
+        // Up from the dock lands here, OK or holding OK opens settings
+        Surface(
+            onClick = onOpenSettings,
+            onLongClick = onOpenSettings,
+            modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(start = ScreenPadding, top = 44.dp),
-        )
+                .padding(start = ScreenPadding - ClockInset, top = 44.dp - ClockInset),
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(22.dp)),
+            colors = ClickableSurfaceDefaults.colors(
+                containerColor = Color.Transparent,
+                focusedContainerColor = Color.White.copy(alpha = 0.10f),
+                pressedContainerColor = Color.White.copy(alpha = 0.16f),
+                contentColor = BrightColors.Text,
+                focusedContentColor = BrightColors.Text,
+            ),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+        ) {
+            Clock(Modifier.padding(ClockInset))
+        }
         val network by viewModel.network.collectAsStateWithLifecycle()
         NetworkIndicator(
             status = network,
@@ -191,10 +261,10 @@ private fun HomeScreen(
     }
 }
 
-/** Moves focus to [target] once the screen is shown and [ready]. */
+/** Moves focus to [target] once the screen is shown and [ready], and again whenever [key] changes. */
 @Composable
-fun RequestFocusOnEnter(target: FocusRequester, ready: Boolean) {
-    LaunchedEffect(target, ready) {
+fun RequestFocusOnEnter(target: FocusRequester, ready: Boolean, key: Any? = null) {
+    LaunchedEffect(target, ready, key) {
         if (!ready) return@LaunchedEffect
         // Lazy items attach during layout, so wait one frame before requesting
         withFrameNanos { }

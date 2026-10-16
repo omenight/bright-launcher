@@ -18,6 +18,7 @@ To go back to the stock launcher, run `set-home-activity` again with its compone
 
 - **OK** opens an app.
 - **Hold OK** pins or unpins it in Favorites.
+- **Menu**, or **Up** to the clock and **OK**, opens settings. Moving over a wallpaper previews it, **OK** keeps it.
 
 ## Building
 

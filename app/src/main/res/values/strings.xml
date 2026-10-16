@@ -2,5 +2,12 @@
 <resources>
     <string name="app_name">Bright</string>
     <string name="all_apps">All apps</string>
+    <string name="settings">Settings</string>
+    <string name="wallpaper">Wallpaper</string>
+    <string name="wallpaper_dawn">Dawn</string>
+    <string name="wallpaper_dusk">Dusk</string>
+    <string name="wallpaper_ocean">Ocean</string>
+    <string name="wallpaper_forest">Forest</string>
+    <string name="wallpaper_midnight">Midnight</string>
     <string name="favorites_empty">Hold OK on any app to pin it here</string>
 </resources>

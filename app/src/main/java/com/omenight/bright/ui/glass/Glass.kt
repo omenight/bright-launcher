@@ -1,10 +1,9 @@
 package com.omenight.bright.ui.glass
 
+import android.content.Context
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -30,12 +29,18 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.omenight.bright.data.SettingsStore
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlin.math.roundToInt
 
 /** The wallpaper behind the whole launcher plus its pre-blurred copies that glass shows. */
@@ -51,32 +56,44 @@ class Backdrop(
 /** Null only for the moment before the first bake finishes. */
 val LocalBackdrop = staticCompositionLocalOf<Backdrop?> { null }
 
-/** The default backdrop, baked once per process on a background thread. */
-object DawnBackdrop {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
-    /** Touch this as early as possible, so the bake overlaps Compose's own startup. */
-    val bake: Deferred<Backdrop> by lazy {
-        scope.async {
-            val wallpaper = WallpaperBaker.dawn()
-            val frosted = WallpaperBaker.frost(wallpaper)
-            Backdrop(
-                wallpaper = wallpaper.asImageBitmap(),
-                frosted = frosted.asImageBitmap(),
-                sheet = WallpaperBaker.darken(frosted, amount = 0.30f).asImageBitmap(),
-                grain = WallpaperBaker.grain().asImageBitmap(),
-            )
-        }
-    }
-}
-
+/**
+ * Bakes the saved wallpaper, or the one being previewed, on a background thread and keeps the
+ * result for the process. Started from onCreate so the first bake overlaps Compose's own startup.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
-@Composable
-fun rememberDawnBackdrop(): Backdrop? {
-    val bake = DawnBackdrop.bake
-    // Normally done before the first frame, so the wallpaper is there from the start
-    val initial = if (bake.isCompleted) bake.getCompleted() else null
-    return produceState(initial) { value = bake.await() }.value
+object BackdropEngine {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val preview = MutableStateFlow<WallpaperPreset?>(null)
+    private var backdrop: StateFlow<Backdrop?>? = null
+
+    @Synchronized
+    fun start(context: Context): StateFlow<Backdrop?> = backdrop ?: combine(
+        SettingsStore(context.applicationContext).wallpaper,
+        preview,
+    ) { saved, previewing -> previewing ?: saved }
+        .distinctUntilChanged()
+        // A newer choice drops the result of a bake still in flight
+        .mapLatest(::bake)
+        .stateIn(scope, SharingStarted.Eagerly, null)
+        .also { backdrop = it }
+
+    /** Shows [preset] instead of the saved wallpaper until called again with null. */
+    fun preview(preset: WallpaperPreset?) {
+        preview.value = preset
+    }
+
+    private fun bake(preset: WallpaperPreset): Backdrop {
+        val wallpaper = WallpaperBaker.render(preset)
+        val frosted = WallpaperBaker.frost(wallpaper)
+        return Backdrop(
+            wallpaper = wallpaper.asImageBitmap(),
+            frosted = frosted.asImageBitmap(),
+            sheet = WallpaperBaker.darken(frosted, amount = 0.30f).asImageBitmap(),
+            grain = grain,
+        )
+    }
+
+    private val grain by lazy { WallpaperBaker.grain().asImageBitmap() }
 }
 
 /**

@@ -9,6 +9,8 @@ import com.omenight.bright.data.FavoritesStore
 import com.omenight.bright.data.LaunchableApp
 import com.omenight.bright.data.NetworkMonitor
 import com.omenight.bright.data.NetworkStatus
+import com.omenight.bright.data.SettingsStore
+import com.omenight.bright.ui.glass.WallpaperPreset
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -25,6 +27,11 @@ data class HomeState(
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = AppRepository(application)
     private val favoritesStore = FavoritesStore(application)
+
+    private val settingsStore = SettingsStore(application)
+
+    val wallpaper: StateFlow<WallpaperPreset> = settingsStore.wallpaper
+        .stateIn(viewModelScope, SharingStarted.Eagerly, WallpaperPreset.Dawn)
 
     val network: StateFlow<NetworkStatus> = NetworkMonitor(application).status()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NetworkStatus.Offline)
@@ -44,6 +51,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleFavorite(app: LaunchableApp) {
         viewModelScope.launch { favoritesStore.toggle(app.packageName) }
+    }
+
+    fun setWallpaper(preset: WallpaperPreset) {
+        viewModelScope.launch { settingsStore.setWallpaper(preset) }
     }
 
     suspend fun art(app: LaunchableApp): AppArt = repository.art(app)

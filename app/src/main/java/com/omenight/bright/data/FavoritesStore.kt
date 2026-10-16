@@ -3,20 +3,17 @@ package com.omenight.bright.data
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-
-private val Context.dataStore by preferencesDataStore(name = "bright")
 
 /** Ordered list of favorite package names. */
 class FavoritesStore(private val context: Context) {
     private val key = stringPreferencesKey("favorites")
 
-    val favorites: Flow<List<String>> = context.dataStore.data.map { prefs -> decode(prefs[key]) }
+    val favorites: Flow<List<String>> = context.brightPreferences.data.map { prefs -> decode(prefs[key]) }
 
     suspend fun toggle(packageName: String) {
-        context.dataStore.edit { prefs ->
+        context.brightPreferences.edit { prefs ->
             val current = decode(prefs[key])
             val updated = if (packageName in current) current - packageName else current + packageName
             prefs[key] = updated.joinToString(SEPARATOR)

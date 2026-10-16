@@ -19,25 +19,21 @@ import kotlin.random.Random
 internal object WallpaperBaker {
     private const val WIDTH = 320
     private const val HEIGHT = 180
+    private const val OPAQUE = 0xFF shl 24
 
-    /** The default wallpaper, night sky warming into dawn from the bottom-left corner. */
-    fun dawn(): Bitmap {
+    fun render(preset: WallpaperPreset): Bitmap {
         val bitmap = createBitmap(WIDTH, HEIGHT)
         val canvas = Canvas(bitmap)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.DITHER_FLAG)
 
         paint.shader = LinearGradient(
             0f, 0f, 0f, HEIGHT.toFloat(),
-            intArrayOf(0xFF060914.toInt(), 0xFF0C1030.toInt(), 0xFF22143A.toInt()),
+            preset.base.map { OPAQUE or it }.toIntArray(),
             floatArrayOf(0f, 0.55f, 1f),
             Shader.TileMode.CLAMP,
         )
         canvas.drawRect(0f, 0f, WIDTH.toFloat(), HEIGHT.toFloat(), paint)
-
-        glow(canvas, paint, x = 0.10f, y = 1.10f, radius = 0.70f, rgb = 0xFF9A62, alpha = 0.60f)
-        glow(canvas, paint, x = 0.50f, y = 1.05f, radius = 0.50f, rgb = 0xC2457E, alpha = 0.38f)
-        glow(canvas, paint, x = 0.38f, y = 0.20f, radius = 0.45f, rgb = 0x3A3DB0, alpha = 0.40f)
-        glow(canvas, paint, x = 0.95f, y = 0.10f, radius = 0.55f, rgb = 0x1E6E8C, alpha = 0.35f)
+        preset.glows.forEach { glow(canvas, paint, it) }
 
         return boxBlur(bitmap, radius = 4, passes = 2)
     }
@@ -71,10 +67,10 @@ internal object WallpaperBaker {
         return Bitmap.createBitmap(pixels, size, size, Bitmap.Config.ARGB_8888)
     }
 
-    private fun glow(canvas: Canvas, paint: Paint, x: Float, y: Float, radius: Float, rgb: Int, alpha: Float) {
-        val color = ((alpha * 255).toInt() shl 24) or rgb
+    private fun glow(canvas: Canvas, paint: Paint, glow: Glow) {
+        val color = ((glow.alpha * 255).toInt() shl 24) or glow.rgb
         paint.shader = RadialGradient(
-            x * WIDTH, y * HEIGHT, radius * WIDTH,
+            glow.x * WIDTH, glow.y * HEIGHT, glow.radius * WIDTH,
             intArrayOf(color, color and 0x00FFFFFF),
             null,
             Shader.TileMode.CLAMP,
