@@ -1,7 +1,16 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
 }
+
+// Release key comes from keystore.properties locally or BRIGHT_* variables in CI, the APK stays unsigned without either
+val keystore = Properties().apply {
+    rootProject.file("keystore.properties").takeIf { it.exists() }?.reader()?.use(::load)
+}
+fun signingValue(key: String, env: String): String? = keystore.getProperty(key) ?: System.getenv(env)
+val releaseStoreFile = signingValue("storeFile", "BRIGHT_STORE_FILE")
 
 android {
     namespace = "com.omenight.bright"
@@ -15,6 +24,17 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = signingValue("storePassword", "BRIGHT_STORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "BRIGHT_KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "BRIGHT_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // Lets a debug build sit next to the release one on the same box
@@ -24,6 +44,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 

@@ -10,7 +10,7 @@ Bright is a minimal Android TV launcher (Kotlin, Jetpack Compose for TV), applic
 
 ```shell
 ./gradlew assembleDebug                 # debug APK, id suffix .debug so it installs next to release
-./gradlew assembleRelease               # R8 minified + resource shrinking, unsigned
+./gradlew assembleRelease               # R8 minified + resource shrinking, signed only if a release key is configured
 ./gradlew lintDebug                     # report in app/build/reports/lint-results-debug.html
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell cmd package set-home-activity com.omenight.bright.debug/com.omenight.bright.MainActivity
@@ -19,6 +19,8 @@ adb shell cmd package set-home-activity com.omenight.bright.debug/com.omenight.b
 - The Gradle daemon runs on JDK 17 via `gradle/gradle-daemon-jvm.properties` (the machine default is a newer JDK that Gradle/Kotlin may not support).
 - Current AndroidX releases require compileSdk 37; the SDK lives in `/opt/android-sdk` (root-owned, packages come from the AUR, no `sdkmanager`).
 - Measure performance on a real low-end box with a release build signed by the debug key (`zipalign` + `apksigner` from build-tools), never a debug build. Frame times come from `adb shell dumpsys gfxinfo <pkg> framestats`, cold start from `am start -W` medians over several alternating runs. After `adb install` the app is not yet compiled with its profile, so run `adb shell cmd package compile -f -m speed-profile <pkg>` to see what users get after idle dexopt.
+- Release signing reads `keystore.properties` at the repo root (gitignored, on the maintainer's machine a symlink to `~/.config/omenight/bright-keystore.properties`) or `BRIGHT_STORE_FILE`/`BRIGHT_STORE_PASSWORD`/`BRIGHT_KEY_ALIAS`/`BRIGHT_KEY_PASSWORD`. Never commit or regenerate the key, every update must be signed with the same one.
+- Releasing means bumping `versionCode` and `versionName` in `app/build.gradle.kts`, then pushing a `v<versionName>` tag. `.github/workflows/release.yml` refuses a tag that does not match, builds with the `BRIGHT_*` secrets and publishes `bright-<version>.apk`, the stable `bright.apk` alias and `SHA256SUMS`. A manual run of the workflow only builds and uploads an artifact.
 - `app/src/main/baseline-prof.txt` marks the whole app package hot; Compose and AndroidX profiles are merged in by AGP.
 - AGP 9 has built-in Kotlin, so only `com.android.application` and the Compose compiler plugin are applied. Versions are in `gradle/libs.versions.toml`.
 

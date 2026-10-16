@@ -27,7 +27,16 @@ Requires JDK 17 and the Android SDK with platform 37.
 
 ```shell
 ./gradlew assembleDebug     # app/build/outputs/apk/debug/
-./gradlew assembleRelease   # minified, unsigned
+./gradlew assembleRelease   # minified, unsigned unless a release key is configured
+```
+
+To sign release builds, put a `keystore.properties` next to `settings.gradle.kts` (it is gitignored):
+
+```properties
+storeFile=/path/to/release.p12
+storePassword=...
+keyAlias=...
+keyPassword=...
 ```
 
 ## License

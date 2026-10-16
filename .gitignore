@@ -8,3 +8,5 @@ local.properties
 captures/
 *.jks
 *.keystore
+keystore.properties
+*.p12
