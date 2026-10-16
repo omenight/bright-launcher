@@ -19,28 +19,41 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import androidx.core.graphics.createBitmap
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
-import androidx.tv.material3.Glow
+import androidx.tv.material3.CardScale
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.omenight.bright.ui.glass.WallpaperBaker
 import com.omenight.bright.ui.glass.glass
 import com.omenight.bright.ui.glass.rimBrush
 import com.omenight.bright.ui.theme.BrightColors
+import kotlin.math.roundToInt
 
 val TileCorner = 14.dp
 private val TileShape = RoundedCornerShape(TileCorner)
+private const val FocusedScale = 1.08f
+private val ShadowBlur = 14.dp
+private val ShadowDrop = 4.dp
 
 /**
  * The one tile style used everywhere. Focus lifts the tile with a real shadow, brightens its
@@ -66,29 +79,47 @@ fun BrightCard(
     }
     val rimStrength by animateFloatAsState(if (focused) 1f else 0.45f, label = "rim")
     val labelAlpha by animateFloatAsState(if (focused) 1f else 0f, label = "label")
+    val lift by animateFloatAsState(if (focused) 1f else 0f, tween(180), label = "lift")
 
-    Column(modifier) {
+    // Lifted above its neighbours so the shadow is not covered by the next tile
+    Column(modifier.zIndex(if (focused) 1f else 0f)) {
         Card(
             onClick = onClick,
             onLongClick = onLongClick,
             modifier = cardModifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
-                .onFocusChanged { focused = it.isFocused },
+                .onFocusChanged { focused = it.isFocused }
+                // Our own scale and baked shadow, the tv Glow re-blurs its shadow on every scaled frame
+                .graphicsLayer {
+                    scaleX = 1f + (FocusedScale - 1f) * lift
+                    scaleY = scaleX
+                }
+                .drawWithCache {
+                    val shadow = tileShadow(size, TileCorner.toPx(), ShadowBlur.toPx())
+                    val spread = size.width * shadow.spread
+                    onDrawBehind {
+                        if (lift > 0f) {
+                            drawImage(
+                                image = shadow.image,
+                                dstOffset = IntOffset(-spread.roundToInt(), (-spread + ShadowDrop.toPx()).roundToInt()),
+                                dstSize = IntSize((size.width + spread * 2).roundToInt(), (size.height + spread * 2).roundToInt()),
+                                alpha = lift,
+                            )
+                        }
+                    }
+                },
             shape = CardDefaults.shape(TileShape),
             colors = CardDefaults.colors(
                 containerColor = Color.Transparent,
                 focusedContainerColor = Color.Transparent,
                 pressedContainerColor = Color.Transparent,
             ),
-            scale = CardDefaults.scale(focusedScale = 1.08f),
+            scale = CardScale.None,
             border = CardDefaults.border(
                 border = Border.None,
                 focusedBorder = Border.None,
                 pressedBorder = Border.None,
-            ),
-            glow = CardDefaults.glow(
-                focusedGlow = Glow(elevationColor = Color.Black.copy(alpha = 0.7f), elevation = 24.dp),
             ),
         ) {
             Box(
@@ -136,3 +167,30 @@ fun BrightCard(
         )
     }
 }
+
+private class TileShadow(
+    val image: ImageBitmap,
+    /** Margin on each side, as a fraction of the tile width. */
+    val spread: Float,
+)
+
+private val shadowCache = HashMap<Long, TileShadow>()
+
+// Baked at quarter size and stretched when drawn, a blurred shadow loses nothing to upscaling
+private fun tileShadow(size: Size, corner: Float, blur: Float): TileShadow {
+    val key = (size.width.toLong() shl 32) or size.height.toLong()
+    return shadowCache.getOrPut(key) {
+        val scale = 0.25f
+        val margin = blur * 3 * scale
+        val w = size.width * scale
+        val h = size.height * scale
+        val bitmap = createBitmap((w + margin * 2).roundToInt(), (h + margin * 2).roundToInt())
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = ShadowColor }
+        android.graphics.Canvas(bitmap).drawRoundRect(margin, margin, margin + w, margin + h, corner * scale, corner * scale, paint)
+        // Three box passes of radius r approximate a gaussian with sigma close to r
+        val blurred = WallpaperBaker.boxBlur(bitmap, radius = (blur * scale).roundToInt().coerceAtLeast(1), passes = 3)
+        TileShadow(blurred.asImageBitmap(), spread = margin / w)
+    }
+}
+
+private const val ShadowColor = 0xB3000000.toInt()

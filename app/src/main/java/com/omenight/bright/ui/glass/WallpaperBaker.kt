@@ -79,7 +79,7 @@ internal object WallpaperBaker {
     }
 
     // Repeated box blur passes converge on a gaussian and stay cheap at these sizes
-    private fun boxBlur(source: Bitmap, radius: Int, passes: Int): Bitmap {
+    fun boxBlur(source: Bitmap, radius: Int, passes: Int): Bitmap {
         val width = source.width
         val height = source.height
         val a = IntArray(width * height)

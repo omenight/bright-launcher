@@ -268,8 +268,10 @@ private fun HomeScreen(
             }
             BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val cardWidth = (maxWidth - DockPadding * 2 - CardGap * (Columns - 1)) / Columns
-                // Padding lives inside the row so focused tiles can lift and cast shadow without clipping
+                // Padding lives inside the row so focused tiles can lift and cast shadow without clipping.
+                // Full width too, a lazy row clips along its axis and would cut the last tile's shadow.
                 LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(start = DockPadding, end = DockPadding, top = 24.dp, bottom = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(CardGap),
                 ) {
