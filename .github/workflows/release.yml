@@ -61,7 +61,7 @@ jobs:
           cp "$APK" dist/bright.apk
           (cd dist && sha256sum *.apk > SHA256SUMS)
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         if: github.ref_type != 'tag'
         with:
           name: bright-${{ steps.version.outputs.name }}
