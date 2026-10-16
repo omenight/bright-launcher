@@ -4,6 +4,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -15,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,6 +55,7 @@ import kotlin.math.roundToInt
 val TileCorner = 14.dp
 private val TileShape = RoundedCornerShape(TileCorner)
 private const val FocusedScale = 1.08f
+private const val PressedSink = 0.04f
 private val ShadowBlur = 14.dp
 private val ShadowDrop = 4.dp
 
@@ -70,8 +74,12 @@ fun BrightCard(
     content: @Composable BoxScope.() -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    // Apps can take seconds to open on slow boxes, so a click replays the glint as an acknowledgement
+    var clicks by remember { mutableIntStateOf(0) }
     val glint = remember { Animatable(1f) }
-    LaunchedEffect(focused) {
+    LaunchedEffect(focused, clicks) {
         if (focused) {
             glint.snapTo(0f)
             glint.animateTo(1f, tween(durationMillis = 1100, easing = FastOutSlowInEasing))
@@ -80,19 +88,25 @@ fun BrightCard(
     val rimStrength by animateFloatAsState(if (focused) 1f else 0.45f, label = "rim")
     val labelAlpha by animateFloatAsState(if (focused) 1f else 0f, label = "label")
     val lift by animateFloatAsState(if (focused) 1f else 0f, tween(180), label = "lift")
+    // Holding OK sinks the tile back towards the surface
+    val press by animateFloatAsState(if (pressed) 1f else 0f, tween(90), label = "press")
 
     // Lifted above its neighbours so the shadow is not covered by the next tile
     Column(modifier.zIndex(if (focused) 1f else 0f)) {
         Card(
-            onClick = onClick,
+            onClick = {
+                clicks++
+                onClick()
+            },
             onLongClick = onLongClick,
+            interactionSource = interaction,
             modifier = cardModifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
                 .onFocusChanged { focused = it.isFocused }
                 // Our own scale and baked shadow, the tv Glow re-blurs its shadow on every scaled frame
                 .graphicsLayer {
-                    scaleX = 1f + (FocusedScale - 1f) * lift
+                    scaleX = 1f + (FocusedScale - 1f) * lift - PressedSink * press
                     scaleY = scaleX
                 }
                 .drawWithCache {
@@ -104,7 +118,7 @@ fun BrightCard(
                                 image = shadow.image,
                                 dstOffset = IntOffset(-spread.roundToInt(), (-spread + ShadowDrop.toPx()).roundToInt()),
                                 dstSize = IntSize((size.width + spread * 2).roundToInt(), (size.height + spread * 2).roundToInt()),
-                                alpha = lift,
+                                alpha = lift * (1f - 0.5f * press),
                             )
                         }
                     }
@@ -128,6 +142,7 @@ fun BrightCard(
                     .then(if (glassBackground) Modifier.glass(TileCorner, rim = false) else Modifier)
                     .drawWithContent {
                         drawContent()
+                        if (press > 0f) drawRect(Color.White.copy(alpha = 0.10f * press))
                         val t = glint.value
                         if (t < 1f) {
                             // A diagonal band of light travelling left to right
