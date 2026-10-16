@@ -53,6 +53,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    androidResources {
+        // Drops the dozens of library translations Bright never shows, add a code here with each new values-xx
+        localeFilters += listOf("en", "ru")
+        // Lists the languages in the system per-app language picker on Android 13+
+        generateLocaleConfig = true
+    }
+
     buildFeatures {
         compose = true
     }

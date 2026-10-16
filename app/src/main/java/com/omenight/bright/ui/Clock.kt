@@ -33,6 +33,8 @@ fun Clock(modifier: Modifier = Modifier) {
     val date = remember(now) {
         val locale = Locale.getDefault()
         SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, "EEEEdMMMM"), locale).format(Date(now))
+            // Russian and others write weekdays in lowercase, but this line starts a block
+            .replaceFirstChar { it.titlecase(locale) }
     }
 
     Column(modifier) {

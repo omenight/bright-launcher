@@ -54,6 +54,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.intl.LocaleList
+import androidx.compose.ui.text.toUpperCase
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.util.Consumer
@@ -233,9 +237,12 @@ private fun HomeScreen(
             val network by viewModel.network.collectAsStateWithLifecycle()
             NetworkIndicator(network)
             Spacer(Modifier.width(14.dp))
+            val settingsLabel = stringResource(R.string.settings)
             Surface(
                 onClick = onOpenSettings,
-                modifier = Modifier.focusRequester(gear),
+                modifier = Modifier
+                    .focusRequester(gear)
+                    .semantics { contentDescription = settingsLabel },
                 shape = ClickableSurfaceDefaults.shape(CircleShape),
                 colors = ClickableSurfaceDefaults.colors(
                     containerColor = Color.Transparent,
@@ -317,7 +324,7 @@ fun RequestFocusOnEnter(target: FocusRequester, ready: Boolean, key: Any? = null
 @Composable
 fun SectionTitle(@StringRes title: Int, modifier: Modifier = Modifier) {
     Text(
-        text = stringResource(title).uppercase(),
+        text = stringResource(title).toUpperCase(LocaleList.current),
         style = TextStyle(
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,

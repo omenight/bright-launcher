@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="all_apps">Все приложения</string>
+    <string name="settings">Настройки</string>
+    <string name="wallpaper">Обои</string>
+    <string name="wallpaper_dawn">Рассвет</string>
+    <string name="wallpaper_dusk">Сумерки</string>
+    <string name="wallpaper_ocean">Океан</string>
+    <string name="wallpaper_forest">Лес</string>
+    <string name="wallpaper_midnight">Полночь</string>
+    <string name="welcome_title">Добро пожаловать в Bright</string>
+    <string name="welcome_subtitle">Спокойный домашний экран для вашего телевизора.</string>
+    <string name="tip_favorites">Удерживайте OK на любом приложении, чтобы закрепить его в избранном.</string>
+    <string name="tip_all_apps">Остальные приложения в одном нажатии, в разделе «Все\u00A0приложения».</string>
+    <string name="tip_settings">Обои и настройки открываются шестеренкой или кнопкой меню.</string>
+    <string name="tip_home">Сделайте Bright главным экраном, чтобы кнопка Home открывала его.</string>
+    <string name="set_as_home">Сделать главным</string>
+    <string name="got_it">Понятно</string>
+    <string name="home_adb_hint">На этом телевизоре нельзя выбрать главный экран. Выполните на компьютере\nadb shell cmd package set-home-activity %1$s</string>
+    <string name="favorites_empty">Удерживайте OK на приложении, чтобы закрепить его здесь</string>
+</resources>
