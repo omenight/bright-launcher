@@ -85,6 +85,8 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
     val backdrop by remember { BackdropEngine.start(context) }.collectAsStateWithLifecycle()
     var allAppsOpen by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
+    // Where focus goes back to when settings closes
+    var settingsFromClock by remember { mutableStateOf(false) }
     // Set once All apps has been closed, so home focuses its tile instead of the first favorite
     var returnedFromAllApps by remember { mutableStateOf(false) }
     // Bumped when an overlay closes, so home takes focus back
@@ -128,7 +130,12 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
                 .onPreviewKeyEvent { event ->
                     val menu = event.key == Key.Menu && event.type == KeyEventType.KeyUp && !allAppsOpen
                     if (menu) {
-                        if (settingsOpen) closeSettings() else settingsOpen = true
+                        if (settingsOpen) {
+                            closeSettings()
+                        } else {
+                            settingsFromClock = false
+                            settingsOpen = true
+                        }
                     }
                     menu
                 },
@@ -146,8 +153,12 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
                         viewModel = viewModel,
                         focusAllApps = returnedFromAllApps,
                         focusEpoch = homeFocusEpoch,
+                        focusClock = settingsFromClock,
                         onOpenAllApps = { allAppsOpen = true },
-                        onOpenSettings = { settingsOpen = true },
+                        onOpenSettings = {
+                            settingsFromClock = true
+                            settingsOpen = true
+                        },
                     )
                 }
             }
@@ -160,6 +171,7 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
             ) {
                 SettingsPanel(
                     current = wallpaper,
+                    open = settingsOpen,
                     onPreview = BackdropEngine::preview,
                     onSelect = viewModel::setWallpaper,
                 )
@@ -174,12 +186,18 @@ private fun HomeScreen(
     viewModel: HomeViewModel,
     focusAllApps: Boolean,
     focusEpoch: Int,
+    focusClock: Boolean,
     onOpenAllApps: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     val firstFavorite = remember { FocusRequester() }
     val allAppsTile = remember { FocusRequester() }
-    val initialFocus = if (focusAllApps || state.favorites.isEmpty()) allAppsTile else firstFavorite
+    val clock = remember { FocusRequester() }
+    val initialFocus = when {
+        focusClock && focusEpoch > 0 -> clock
+        focusAllApps || state.favorites.isEmpty() -> allAppsTile
+        else -> firstFavorite
+    }
     RequestFocusOnEnter(initialFocus, state.loaded, key = focusEpoch)
 
     Box(Modifier.fillMaxSize()) {
@@ -189,7 +207,8 @@ private fun HomeScreen(
             onLongClick = onOpenSettings,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(start = ScreenPadding - ClockInset, top = 44.dp - ClockInset),
+                .padding(start = ScreenPadding - ClockInset, top = 44.dp - ClockInset)
+                .focusRequester(clock),
             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(22.dp)),
             colors = ClickableSurfaceDefaults.colors(
                 containerColor = Color.Transparent,

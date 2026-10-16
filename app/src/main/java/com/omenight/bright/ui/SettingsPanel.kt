@@ -45,6 +45,8 @@ import com.omenight.bright.ui.theme.BrightColors
 @Composable
 fun SettingsPanel(
     current: WallpaperPreset,
+    /** False while the panel animates out, so focus can return to home during the exit. */
+    open: Boolean,
     onPreview: (WallpaperPreset) -> Unit,
     onSelect: (WallpaperPreset) -> Unit,
     modifier: Modifier = Modifier,
@@ -60,7 +62,7 @@ fun SettingsPanel(
             .glass(28.dp, tint = Color.Black.copy(alpha = 0.28f))
             .padding(horizontal = 16.dp, vertical = 28.dp)
             // Keeps D-pad focus inside the panel, the home screen behind it is not reachable
-            .focusProperties { onExit = { cancelFocusChange() } }
+            .focusProperties { onExit = { if (open) cancelFocusChange() } }
             .focusGroup(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
