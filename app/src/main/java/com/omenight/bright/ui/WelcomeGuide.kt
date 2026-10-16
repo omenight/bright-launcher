@@ -46,7 +46,11 @@ import com.omenight.bright.ui.theme.BrightColors
 
 /** Shown once on first launch. Teaches the three things a remote user cannot discover alone. */
 @Composable
-fun WelcomeGuide(onDone: () -> Unit) {
+fun WelcomeGuide(
+    /** False while the guide fades out, so home can take focus during the exit. */
+    open: Boolean,
+    onDone: () -> Unit,
+) {
     val context = LocalContext.current
     val homeRole = remember { HomeRole(context) }
     var isDefaultHome by remember { mutableStateOf(homeRole.isDefault()) }
@@ -79,7 +83,7 @@ fun WelcomeGuide(onDone: () -> Unit) {
                 .width(580.dp)
                 .glass(30.dp, tint = Color.Black.copy(alpha = 0.30f))
                 .padding(horizontal = 40.dp, vertical = 36.dp)
-                .focusProperties { onExit = { cancelFocusChange() } }
+                .focusProperties { onExit = { if (open) cancelFocusChange() } }
                 .focusGroup(),
         ) {
             Text(

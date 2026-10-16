@@ -90,7 +90,9 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
     // Where focus goes back to when settings closes
     var settingsFromGear by remember { mutableStateOf(false) }
     val welcomed by viewModel.welcomed.collectAsStateWithLifecycle()
-    val showWelcome = welcomed == false
+    // Hides the guide at once, the saved flag arrives only after the DataStore write
+    var welcomeDismissed by remember { mutableStateOf(false) }
+    val showWelcome = welcomed == false && !welcomeDismissed
     // Set once All apps has been closed, so home focuses its tile instead of the first favorite
     var returnedFromAllApps by remember { mutableStateOf(false) }
     // Bumped when an overlay closes, so home takes focus back
@@ -98,6 +100,11 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
     val closeAllApps = {
         if (allAppsOpen) returnedFromAllApps = true
         allAppsOpen = false
+    }
+    val dismissWelcome: () -> Unit = {
+        welcomeDismissed = true
+        viewModel.finishWelcome()
+        homeFocusEpoch++
     }
     val closeSettings = {
         if (settingsOpen) {
@@ -122,10 +129,7 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
     BackHandler { closeAllApps() }
     // Registered later, so it wins while the panel is open
     BackHandler(enabled = settingsOpen) { closeSettings() }
-    BackHandler(enabled = showWelcome) {
-        viewModel.finishWelcome()
-        homeFocusEpoch++
-    }
+    BackHandler(enabled = showWelcome) { dismissWelcome() }
 
     val sheet by animateFloatAsState(if (allAppsOpen) 1f else 0f, tween(240), label = "sheet")
 
@@ -186,12 +190,7 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
             }
 
             AnimatedVisibility(visible = showWelcome, enter = fadeIn(tween(300)), exit = fadeOut(tween(200))) {
-                WelcomeGuide(
-                    onDone = {
-                        viewModel.finishWelcome()
-                        homeFocusEpoch++
-                    },
-                )
+                WelcomeGuide(open = showWelcome, onDone = dismissWelcome)
             }
         }
     }
