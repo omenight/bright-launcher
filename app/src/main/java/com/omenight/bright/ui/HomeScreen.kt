@@ -19,12 +19,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -75,7 +78,6 @@ val ScreenPadding = 56.dp
 private val DockMargin = 40.dp
 private val DockPadding = 28.dp
 private val DockCorner = 30.dp
-private val ClockInset = 16.dp
 
 @Composable
 fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
@@ -86,7 +88,9 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
     var allAppsOpen by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     // Where focus goes back to when settings closes
-    var settingsFromClock by remember { mutableStateOf(false) }
+    var settingsFromGear by remember { mutableStateOf(false) }
+    val welcomed by viewModel.welcomed.collectAsStateWithLifecycle()
+    val showWelcome = welcomed == false
     // Set once All apps has been closed, so home focuses its tile instead of the first favorite
     var returnedFromAllApps by remember { mutableStateOf(false) }
     // Bumped when an overlay closes, so home takes focus back
@@ -118,6 +122,10 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
     BackHandler { closeAllApps() }
     // Registered later, so it wins while the panel is open
     BackHandler(enabled = settingsOpen) { closeSettings() }
+    BackHandler(enabled = showWelcome) {
+        viewModel.finishWelcome()
+        homeFocusEpoch++
+    }
 
     val sheet by animateFloatAsState(if (allAppsOpen) 1f else 0f, tween(240), label = "sheet")
 
@@ -128,12 +136,12 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
                 // Read inside the lambda so the fade only redraws, never recomposes
                 .backdrop(backdrop, fallback = BrightColors.Background) { sheet }
                 .onPreviewKeyEvent { event ->
-                    val menu = event.key == Key.Menu && event.type == KeyEventType.KeyUp && !allAppsOpen
+                    val menu = event.key == Key.Menu && event.type == KeyEventType.KeyUp && !allAppsOpen && !showWelcome
                     if (menu) {
                         if (settingsOpen) {
                             closeSettings()
                         } else {
-                            settingsFromClock = false
+                            settingsFromGear = false
                             settingsOpen = true
                         }
                     }
@@ -153,10 +161,10 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
                         viewModel = viewModel,
                         focusAllApps = returnedFromAllApps,
                         focusEpoch = homeFocusEpoch,
-                        focusClock = settingsFromClock,
+                        focusGear = settingsFromGear,
                         onOpenAllApps = { allAppsOpen = true },
                         onOpenSettings = {
-                            settingsFromClock = true
+                            settingsFromGear = true
                             settingsOpen = true
                         },
                     )
@@ -176,6 +184,15 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
                     onSelect = viewModel::setWallpaper,
                 )
             }
+
+            AnimatedVisibility(visible = showWelcome, enter = fadeIn(tween(300)), exit = fadeOut(tween(200))) {
+                WelcomeGuide(
+                    onDone = {
+                        viewModel.finishWelcome()
+                        homeFocusEpoch++
+                    },
+                )
+            }
         }
     }
 }
@@ -186,48 +203,53 @@ private fun HomeScreen(
     viewModel: HomeViewModel,
     focusAllApps: Boolean,
     focusEpoch: Int,
-    focusClock: Boolean,
+    focusGear: Boolean,
     onOpenAllApps: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     val firstFavorite = remember { FocusRequester() }
     val allAppsTile = remember { FocusRequester() }
-    val clock = remember { FocusRequester() }
+    val gear = remember { FocusRequester() }
     val initialFocus = when {
-        focusClock && focusEpoch > 0 -> clock
+        focusGear && focusEpoch > 0 -> gear
         focusAllApps || state.favorites.isEmpty() -> allAppsTile
         else -> firstFavorite
     }
     RequestFocusOnEnter(initialFocus, state.loaded, key = focusEpoch)
 
     Box(Modifier.fillMaxSize()) {
-        // Up from the dock lands here, OK or holding OK opens settings
-        Surface(
-            onClick = onOpenSettings,
-            onLongClick = onOpenSettings,
-            modifier = Modifier
+        Clock(
+            Modifier
                 .align(Alignment.TopStart)
-                .padding(start = ScreenPadding - ClockInset, top = 44.dp - ClockInset)
-                .focusRequester(clock),
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(22.dp)),
-            colors = ClickableSurfaceDefaults.colors(
-                containerColor = Color.Transparent,
-                focusedContainerColor = Color.White.copy(alpha = 0.10f),
-                pressedContainerColor = Color.White.copy(alpha = 0.16f),
-                contentColor = BrightColors.Text,
-                focusedContentColor = BrightColors.Text,
-            ),
-            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
-        ) {
-            Clock(Modifier.padding(ClockInset))
-        }
-        val network by viewModel.network.collectAsStateWithLifecycle()
-        NetworkIndicator(
-            status = network,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = ScreenPadding, top = 64.dp),
+                .padding(start = ScreenPadding, top = 44.dp),
         )
+
+        // Top-right status corner, Up from the dock lands on the gear
+        Row(
+            Modifier
+                .align(Alignment.TopEnd)
+                .padding(end = ScreenPadding - 6.dp, top = 52.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val network by viewModel.network.collectAsStateWithLifecycle()
+            NetworkIndicator(network)
+            Spacer(Modifier.width(14.dp))
+            Surface(
+                onClick = onOpenSettings,
+                modifier = Modifier.focusRequester(gear),
+                shape = ClickableSurfaceDefaults.shape(CircleShape),
+                colors = ClickableSurfaceDefaults.colors(
+                    containerColor = Color.Transparent,
+                    focusedContainerColor = Color.White.copy(alpha = 0.16f),
+                    pressedContainerColor = Color.White.copy(alpha = 0.24f),
+                    contentColor = BrightColors.Text,
+                    focusedContentColor = BrightColors.Text,
+                ),
+                scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
+            ) {
+                GlyphIcon(Glyph.Gear, size = 26.dp, modifier = Modifier.padding(10.dp))
+            }
+        }
 
         // The glass dock, the one large glass surface on home
         Column(

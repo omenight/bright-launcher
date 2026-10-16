@@ -1,6 +1,7 @@
 package com.omenight.bright.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.omenight.bright.ui.glass.WallpaperPreset
@@ -9,9 +10,17 @@ import kotlinx.coroutines.flow.map
 
 class SettingsStore(private val context: Context) {
     private val wallpaperKey = stringPreferencesKey("wallpaper")
+    private val welcomedKey = booleanPreferencesKey("welcomed")
 
     val wallpaper: Flow<WallpaperPreset> = context.brightPreferences.data.map { prefs ->
         WallpaperPreset.entries.firstOrNull { it.name == prefs[wallpaperKey] } ?: WallpaperPreset.Dawn
+    }
+
+    /** Whether the first-run guide has been dismissed. */
+    val welcomed: Flow<Boolean> = context.brightPreferences.data.map { it[welcomedKey] ?: false }
+
+    suspend fun setWelcomed() {
+        context.brightPreferences.edit { it[welcomedKey] = true }
     }
 
     suspend fun setWallpaper(preset: WallpaperPreset) {

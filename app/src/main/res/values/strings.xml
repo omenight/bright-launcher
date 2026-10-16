@@ -9,5 +9,14 @@
     <string name="wallpaper_ocean">Ocean</string>
     <string name="wallpaper_forest">Forest</string>
     <string name="wallpaper_midnight">Midnight</string>
+    <string name="welcome_title">Welcome to Bright</string>
+    <string name="welcome_subtitle">A quiet home for your TV.</string>
+    <string name="tip_favorites">Hold OK on any app to pin it to your favorites.</string>
+    <string name="tip_all_apps">Everything else lives one press away in All apps.</string>
+    <string name="tip_settings">Wallpapers and settings are behind the gear, or the Menu key.</string>
+    <string name="tip_home">Make Bright your home screen so the Home button opens it.</string>
+    <string name="set_as_home">Set as home</string>
+    <string name="got_it">Got it</string>
+    <string name="home_adb_hint">This TV has no home picker. From a computer, run\nadb shell cmd package set-home-activity %1$s</string>
     <string name="favorites_empty">Hold OK on any app to pin it here</string>
 </resources>

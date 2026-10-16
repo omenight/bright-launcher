@@ -1,6 +1,5 @@
 package com.omenight.bright.ui
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -15,7 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -89,17 +87,6 @@ fun AllAppsCard(
         cardModifier = cardModifier,
         glassBackground = true,
     ) {
-        // A 3x3 dot grid, drawn rather than pulling in an icon library
-        Canvas(
-            Modifier
-                .align(Alignment.Center)
-                .size(28.dp),
-        ) {
-            val step = size.width / 2
-            val radius = size.width / 10
-            for (row in 0..2) for (column in 0..2) {
-                drawCircle(BrightColors.Text, radius, Offset(column * step, row * step))
-            }
-        }
+        GlyphIcon(Glyph.Grid, size = 32.dp, modifier = Modifier.align(Alignment.Center))
     }
 }

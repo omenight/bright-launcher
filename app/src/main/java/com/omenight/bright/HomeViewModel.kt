@@ -33,6 +33,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val wallpaper: StateFlow<WallpaperPreset> = settingsStore.wallpaper
         .stateIn(viewModelScope, SharingStarted.Eagerly, WallpaperPreset.Dawn)
 
+    /** Null until the stored flag is read, so the guide never flashes for returning users. */
+    val welcomed: StateFlow<Boolean?> = settingsStore.welcomed
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     val network: StateFlow<NetworkStatus> = NetworkMonitor(application).status()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NetworkStatus.Offline)
 
@@ -51,6 +55,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleFavorite(app: LaunchableApp) {
         viewModelScope.launch { favoritesStore.toggle(app.packageName) }
+    }
+
+    fun finishWelcome() {
+        viewModelScope.launch { settingsStore.setWelcomed() }
     }
 
     fun setWallpaper(preset: WallpaperPreset) {
