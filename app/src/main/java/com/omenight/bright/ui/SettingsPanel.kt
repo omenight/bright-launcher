@@ -1,5 +1,6 @@
 package com.omenight.bright.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +17,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -39,8 +43,8 @@ import com.omenight.bright.ui.glass.glass
 import com.omenight.bright.ui.theme.BrightColors
 
 /**
- * Side panel opened by the gear or the Menu key. Leads to the system settings and holds Bright's
- * few own ones. Focusing a wallpaper previews it on the real background; OK keeps it.
+ * Side panel opened by the gear or the Menu key. The menu leads to the wallpaper list and the
+ * system settings. Focusing a wallpaper previews it on the real background; OK keeps it.
  */
 @Composable
 fun SettingsPanel(
@@ -53,8 +57,12 @@ fun SettingsPanel(
     onOpenSystemSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val firstRow = remember { FocusRequester() }
-    RequestFocusOnEnter(firstRow, ready = true)
+    var page by remember { mutableStateOf(Page.Menu) }
+    // Registered after the root handlers, so Back in the list returns to the menu instead of closing
+    BackHandler(enabled = open && page == Page.Wallpaper) {
+        onPreview(null)
+        page = Page.Menu
+    }
 
     Column(
         modifier
@@ -69,45 +77,87 @@ fun SettingsPanel(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
-            text = stringResource(R.string.settings),
+            text = stringResource(if (page == Page.Menu) R.string.settings else R.string.wallpaper),
             style = TextStyle(fontSize = 26.sp, fontWeight = FontWeight.Light, shadow = BrightColors.TextShadow),
             modifier = Modifier.padding(start = 12.dp),
         )
         Spacer(Modifier.height(20.dp))
-        SettingsRow(
-            title = stringResource(R.string.system_settings),
-            onFocused = { onPreview(null) },
-            onClick = onOpenSystemSettings,
-            modifier = Modifier.focusRequester(firstRow),
-            leading = { GlyphIcon(Glyph.Gear, size = 24.dp, color = BrightColors.TextMuted) },
-            trailing = { GlyphIcon(Glyph.Chevron, size = 20.dp, color = BrightColors.TextMuted) },
-        )
-        Spacer(Modifier.height(24.dp))
-        SectionTitle(R.string.wallpaper, Modifier.padding(start = 12.dp, bottom = 8.dp))
-        WallpaperPreset.entries.forEach { preset ->
-            SettingsRow(
-                title = stringResource(preset.title),
-                onFocused = { onPreview(preset) },
-                onClick = { onSelect(preset) },
-                leading = { Swatch(preset) },
-                trailing = if (preset == current) {
-                    { Box(Modifier.size(7.dp).background(BrightColors.Text, CircleShape)) }
-                } else {
-                    null
-                },
-            )
+        when (page) {
+            Page.Menu -> MenuPage(current, onOpenWallpapers = { page = Page.Wallpaper }, onOpenSystemSettings)
+            Page.Wallpaper -> WallpaperPage(current, onPreview, onSelect)
         }
     }
+}
+
+private enum class Page { Menu, Wallpaper }
+
+@Composable
+private fun MenuPage(current: WallpaperPreset, onOpenWallpapers: () -> Unit, onOpenSystemSettings: () -> Unit) {
+    val firstRow = remember { FocusRequester() }
+    RequestFocusOnEnter(firstRow, ready = true)
+
+    SettingsRow(
+        title = stringResource(R.string.wallpaper),
+        onClick = onOpenWallpapers,
+        modifier = Modifier.focusRequester(firstRow),
+        leading = { Swatch(current) },
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(current.title),
+                    color = BrightColors.TextMuted,
+                    style = TextStyle(fontSize = 15.sp),
+                )
+                Chevron()
+            }
+        },
+    )
+    SettingsRow(
+        title = stringResource(R.string.system_settings),
+        onClick = onOpenSystemSettings,
+        leading = { GlyphIcon(Glyph.Gear, size = 24.dp, color = BrightColors.TextMuted) },
+        trailing = { Chevron() },
+    )
+}
+
+@Composable
+private fun WallpaperPage(
+    current: WallpaperPreset,
+    onPreview: (WallpaperPreset?) -> Unit,
+    onSelect: (WallpaperPreset) -> Unit,
+) {
+    val currentRow = remember { FocusRequester() }
+    RequestFocusOnEnter(currentRow, ready = true)
+
+    WallpaperPreset.entries.forEach { preset ->
+        SettingsRow(
+            title = stringResource(preset.title),
+            onFocused = { onPreview(preset) },
+            onClick = { onSelect(preset) },
+            modifier = if (preset == current) Modifier.focusRequester(currentRow) else Modifier,
+            leading = { Swatch(preset) },
+            trailing = if (preset == current) {
+                { Box(Modifier.size(7.dp).background(BrightColors.Text, CircleShape)) }
+            } else {
+                null
+            },
+        )
+    }
+}
+
+@Composable
+private fun Chevron() {
+    GlyphIcon(Glyph.Chevron, size = 20.dp, color = BrightColors.TextMuted, modifier = Modifier.padding(start = 4.dp))
 }
 
 @Composable
 private fun SettingsRow(
     title: String,
-    onFocused: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     leading: @Composable () -> Unit,
     trailing: (@Composable () -> Unit)? = null,
+    onFocused: () -> Unit = {},
 ) {
     Surface(
         onClick = onClick,

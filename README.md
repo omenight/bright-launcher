@@ -18,7 +18,7 @@ To go back to the stock launcher, run `set-home-activity` again with its compone
 
 - **OK** opens an app.
 - **Hold OK** pins or unpins it in Favorites.
-- **Menu**, or **Up** to the gear and **OK**, opens the menu. It leads to the system settings and lists wallpapers; moving over a wallpaper previews it, **OK** keeps it.
+- **Menu**, or **Up** to the gear and **OK**, opens the menu with Wallpaper and System settings. In the wallpaper list, moving over one previews it, **OK** keeps it and **Back** returns to the menu.
 - On first launch a short guide explains these and offers to make Bright the default home.
 
 ## Building
