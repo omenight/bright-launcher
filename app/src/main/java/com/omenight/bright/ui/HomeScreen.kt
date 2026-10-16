@@ -61,6 +61,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.util.Consumer
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ClickableSurfaceDefaults
@@ -134,6 +135,11 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
     // Registered later, so it wins while the panel is open
     BackHandler(enabled = settingsOpen) { closeSettings() }
     BackHandler(enabled = showWelcome) { dismissWelcome() }
+
+    LifecycleResumeEffect(viewModel) {
+        viewModel.onResume()
+        onPauseOrDispose { }
+    }
 
     val sheet by animateFloatAsState(if (allAppsOpen) 1f else 0f, tween(240), label = "sheet")
 

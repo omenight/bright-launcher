@@ -6,16 +6,21 @@ import androidx.lifecycle.viewModelScope
 import com.omenight.bright.data.AppArt
 import com.omenight.bright.data.AppRepository
 import com.omenight.bright.data.FavoritesStore
+import com.omenight.bright.data.HomeRole
 import com.omenight.bright.data.LaunchableApp
 import com.omenight.bright.data.NetworkMonitor
 import com.omenight.bright.data.NetworkStatus
 import com.omenight.bright.data.SettingsStore
+import com.omenight.bright.data.SystemWallpaper
 import com.omenight.bright.ui.glass.WallpaperPreset
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class HomeState(
     val favorites: List<LaunchableApp> = emptyList(),
@@ -29,6 +34,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val favoritesStore = FavoritesStore(application)
 
     private val settingsStore = SettingsStore(application)
+    private val homeRole = HomeRole(application)
+    private val systemWallpaper = SystemWallpaper(application)
+    private val systemWallpaperLock = Mutex()
 
     val wallpaper: StateFlow<WallpaperPreset> = settingsStore.wallpaper
         .stateIn(viewModelScope, SharingStarted.Eagerly, WallpaperPreset.Dawn)
@@ -64,7 +72,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setWallpaper(preset: WallpaperPreset) {
-        viewModelScope.launch { settingsStore.setWallpaper(preset) }
+        viewModelScope.launch {
+            settingsStore.setWallpaper(preset)
+            syncSystemWallpaper()
+        }
+    }
+
+    /** Called on every resume, so it also catches Bright becoming the default home. */
+    fun onResume() {
+        viewModelScope.launch { syncSystemWallpaper() }
+    }
+
+    // Only as the default home, another launcher may rely on the system wallpaper for its own look
+    private suspend fun syncSystemWallpaper() = systemWallpaperLock.withLock {
+        val preset = settingsStore.wallpaper.first()
+        if (!homeRole.isDefault() || settingsStore.systemWallpaper.first() == preset.name) return@withLock
+        if (systemWallpaper.set(preset)) settingsStore.setSystemWallpaper(preset)
     }
 
     suspend fun art(app: LaunchableApp): AppArt = repository.art(app)
