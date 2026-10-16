@@ -132,6 +132,13 @@ private fun HomeScreen(
                 .align(Alignment.TopStart)
                 .padding(start = ScreenPadding, top = 44.dp),
         )
+        val network by viewModel.network.collectAsStateWithLifecycle()
+        NetworkIndicator(
+            status = network,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(end = ScreenPadding, top = 64.dp),
+        )
 
         // The glass dock, the one large glass surface on home
         Column(

@@ -7,6 +7,8 @@ import com.omenight.bright.data.AppArt
 import com.omenight.bright.data.AppRepository
 import com.omenight.bright.data.FavoritesStore
 import com.omenight.bright.data.LaunchableApp
+import com.omenight.bright.data.NetworkMonitor
+import com.omenight.bright.data.NetworkStatus
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -23,6 +25,9 @@ data class HomeState(
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = AppRepository(application)
     private val favoritesStore = FavoritesStore(application)
+
+    val network: StateFlow<NetworkStatus> = NetworkMonitor(application).status()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NetworkStatus.Offline)
 
     val state: StateFlow<HomeState> = combine(repository.apps(), favoritesStore.favorites) { apps, favorites ->
         val byPackage = apps.associateBy { it.packageName }
