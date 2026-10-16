@@ -1,0 +1,4 @@
+# Bright's own code is small, so the whole package is marked hot for startup.
+# Compose and AndroidX bring their own profiles, which AGP merges in.
+HSPLcom/omenight/bright/**->**(**)**
+Lcom/omenight/bright/**;

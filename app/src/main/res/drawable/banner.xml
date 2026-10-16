@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TV home row banner, 16:9 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path
+        android:fillColor="#07080B"
+        android:pathData="M0,0h320v180h-320z" />
+    <path
+        android:fillColor="#FFD9A0"
+        android:pathData="M124,104a36,36 0,0 1,72 0z" />
+    <path
+        android:fillColor="#F2F2F2"
+        android:pathData="M110,110h100v4h-100z" />
+</vector>

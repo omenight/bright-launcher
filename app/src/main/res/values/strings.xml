@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bright</string>
+    <string name="all_apps">All apps</string>
+    <string name="favorites_empty">Hold OK on any app to pin it here</string>
+</resources>
