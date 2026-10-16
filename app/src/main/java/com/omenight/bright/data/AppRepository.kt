@@ -1,5 +1,6 @@
 package com.omenight.bright.data
 
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -10,6 +11,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.UserHandle
+import android.provider.Settings
 import android.util.LruCache
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -68,6 +70,14 @@ class AppRepository(private val context: Context) {
             ?: packageManager.getLaunchIntentForPackage(app.packageName)
             ?: Intent(Intent.ACTION_MAIN).setComponent(app.component)
         context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    /** Opens the device's own settings app, false on the rare box that has none. */
+    fun openSystemSettings(): Boolean = try {
+        context.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+    } catch (_: ActivityNotFoundException) {
+        false
     }
 
     private fun loadApps(): List<LaunchableApp> {

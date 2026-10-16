@@ -39,20 +39,22 @@ import com.omenight.bright.ui.glass.glass
 import com.omenight.bright.ui.theme.BrightColors
 
 /**
- * Side panel holding Bright's few settings. Focusing a wallpaper previews it on the real
- * background; OK keeps it.
+ * Side panel opened by the gear or the Menu key. Leads to the system settings and holds Bright's
+ * few own ones. Focusing a wallpaper previews it on the real background; OK keeps it.
  */
 @Composable
 fun SettingsPanel(
     current: WallpaperPreset,
     /** False while the panel animates out, so focus can return to home during the exit. */
     open: Boolean,
-    onPreview: (WallpaperPreset) -> Unit,
+    /** Called with null when focus leaves the wallpapers, so the saved one shows again. */
+    onPreview: (WallpaperPreset?) -> Unit,
     onSelect: (WallpaperPreset) -> Unit,
+    onOpenSystemSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val currentRow = remember { FocusRequester() }
-    RequestFocusOnEnter(currentRow, ready = true)
+    val firstRow = remember { FocusRequester() }
+    RequestFocusOnEnter(firstRow, ready = true)
 
     Column(
         modifier
@@ -72,15 +74,27 @@ fun SettingsPanel(
             modifier = Modifier.padding(start = 12.dp),
         )
         Spacer(Modifier.height(20.dp))
+        SettingsRow(
+            title = stringResource(R.string.system_settings),
+            onFocused = { onPreview(null) },
+            onClick = onOpenSystemSettings,
+            modifier = Modifier.focusRequester(firstRow),
+            leading = { GlyphIcon(Glyph.Gear, size = 24.dp, color = BrightColors.TextMuted) },
+            trailing = { GlyphIcon(Glyph.Chevron, size = 20.dp, color = BrightColors.TextMuted) },
+        )
+        Spacer(Modifier.height(24.dp))
         SectionTitle(R.string.wallpaper, Modifier.padding(start = 12.dp, bottom = 8.dp))
         WallpaperPreset.entries.forEach { preset ->
             SettingsRow(
                 title = stringResource(preset.title),
-                selected = preset == current,
                 onFocused = { onPreview(preset) },
                 onClick = { onSelect(preset) },
-                modifier = if (preset == current) Modifier.focusRequester(currentRow) else Modifier,
                 leading = { Swatch(preset) },
+                trailing = if (preset == current) {
+                    { Box(Modifier.size(7.dp).background(BrightColors.Text, CircleShape)) }
+                } else {
+                    null
+                },
             )
         }
     }
@@ -89,11 +103,11 @@ fun SettingsPanel(
 @Composable
 private fun SettingsRow(
     title: String,
-    selected: Boolean,
     onFocused: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     leading: @Composable () -> Unit,
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     Surface(
         onClick = onClick,
@@ -122,13 +136,7 @@ private fun SettingsRow(
                     .padding(start = 14.dp)
                     .weight(1f),
             )
-            if (selected) {
-                Box(
-                    Modifier
-                        .size(7.dp)
-                        .background(BrightColors.Text, CircleShape),
-                )
-            }
+            trailing?.invoke()
         }
     }
 }

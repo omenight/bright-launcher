@@ -20,12 +20,13 @@ import androidx.compose.ui.unit.Dp
 import com.omenight.bright.ui.theme.BrightColors
 
 /** Bright's few icons, drawn in code so the APK ships no icon font or vector set. */
-enum class Glyph { Gear, Grid, House, Pin }
+enum class Glyph { Chevron, Gear, Grid, House, Pin }
 
 @Composable
 fun GlyphIcon(glyph: Glyph, size: Dp, modifier: Modifier = Modifier, color: Color = BrightColors.Text) {
     Canvas(modifier.size(size)) {
         when (glyph) {
+            Glyph.Chevron -> chevron(color)
             Glyph.Gear -> drawPath(gearPath(this.size.minDimension), color)
             Glyph.Grid -> grid(color)
             Glyph.House -> house(color)
@@ -63,6 +64,16 @@ private fun DrawScope.grid(color: Color) {
     for (row in 0..2) for (column in 0..2) {
         drawCircle(color, radius, Offset(inset + column * step, inset + row * step))
     }
+}
+
+private fun DrawScope.chevron(color: Color) {
+    val w = size.width
+    val path = Path().apply {
+        moveTo(w * 0.38f, w * 0.22f)
+        lineTo(w * 0.66f, w * 0.50f)
+        lineTo(w * 0.38f, w * 0.78f)
+    }
+    drawPath(path, color, style = Stroke(width = w * 0.09f, cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 
 private fun DrawScope.house(color: Color) {

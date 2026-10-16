@@ -2,6 +2,7 @@
 <resources>
     <string name="all_apps">Все приложения</string>
     <string name="settings">Настройки</string>
+    <string name="system_settings">Системные настройки</string>
     <string name="wallpaper">Обои</string>
     <string name="wallpaper_dawn">Рассвет</string>
     <string name="wallpaper_dusk">Сумерки</string>

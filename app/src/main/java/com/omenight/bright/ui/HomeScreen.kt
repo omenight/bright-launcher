@@ -190,6 +190,11 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
                     open = settingsOpen,
                     onPreview = BackdropEngine::preview,
                     onSelect = viewModel::setWallpaper,
+                    onOpenSystemSettings = {
+                        // Closed first, so coming back from system settings lands on home
+                        closeSettings()
+                        viewModel.openSystemSettings()
+                    },
                 )
             }
 

@@ -3,6 +3,7 @@
     <string name="app_name" translatable="false">Bright</string>
     <string name="all_apps">All apps</string>
     <string name="settings">Settings</string>
+    <string name="system_settings">System settings</string>
     <string name="wallpaper">Wallpaper</string>
     <string name="wallpaper_dawn">Dawn</string>
     <string name="wallpaper_dusk">Dusk</string>

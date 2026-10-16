@@ -53,6 +53,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun launch(app: LaunchableApp) = repository.launch(app)
 
+    fun openSystemSettings() = repository.openSystemSettings()
+
     fun toggleFavorite(app: LaunchableApp) {
         viewModelScope.launch { favoritesStore.toggle(app.packageName) }
     }
