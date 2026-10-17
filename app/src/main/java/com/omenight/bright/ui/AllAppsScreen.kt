@@ -31,7 +31,7 @@ fun AllAppsScreen(
     if (firstApp != null) RequestFocusOnEnter(firstApp, ready = true)
     RefocusAfterMenu(tiles, refocusApp, refocusEpoch, fallback = firstApp)
 
-    // The frosted sheet behind this screen is painted by the root backdrop, not here
+    // The dimmed wallpaper behind this screen is painted by the root backdrop, not here
     Column(Modifier.fillMaxSize()) {
         SectionTitle(R.string.all_apps, Modifier.padding(start = ScreenPadding, top = 40.dp))
         // The title stays put, only the grid scrolls

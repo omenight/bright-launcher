@@ -1,4 +1,4 @@
-package com.omenight.bright.ui.glass
+package com.omenight.bright.ui.wallpaper
 
 import androidx.annotation.StringRes
 import com.omenight.bright.R

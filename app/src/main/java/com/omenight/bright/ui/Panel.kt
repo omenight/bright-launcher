@@ -17,6 +17,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -26,10 +30,11 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
-import com.omenight.bright.ui.glass.glass
 import com.omenight.bright.ui.theme.BrightColors
 
-/** The glass side sheet every Bright menu lives in. */
+private val SheetShadow = 40.dp
+
+/** The full-height sheet on the right edge that every Bright menu lives in. */
 @Composable
 fun SidePanel(
     title: String,
@@ -41,10 +46,18 @@ fun SidePanel(
     Column(
         modifier
             .fillMaxHeight()
-            .width(360.dp)
-            .padding(24.dp)
-            .glass(28.dp, tint = Color.Black.copy(alpha = 0.28f))
-            .padding(horizontal = 16.dp, vertical = 28.dp)
+            .width(380.dp)
+            // A soft shadow cast to the left, so the sheet sits above the screen it covers
+            .drawBehind {
+                val width = SheetShadow.toPx()
+                drawRect(
+                    brush = Brush.horizontalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.32f)), startX = -width, endX = 0f),
+                    topLeft = Offset(-width, 0f),
+                    size = Size(width, size.height),
+                )
+            }
+            .surface(0.dp)
+            .padding(start = 20.dp, end = 20.dp, top = 52.dp, bottom = 28.dp)
             // Keeps D-pad focus inside the panel, the screen behind it is not reachable
             .focusProperties { onExit = { if (open) cancelFocusChange() } }
             .focusGroup(),
@@ -52,7 +65,7 @@ fun SidePanel(
     ) {
         Text(
             text = title,
-            style = TextStyle(fontSize = 26.sp, fontWeight = FontWeight.Light, shadow = BrightColors.TextShadow),
+            style = TextStyle(fontSize = 26.sp, fontWeight = FontWeight.Light),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(start = 12.dp),

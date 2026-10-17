@@ -24,6 +24,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -41,9 +42,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.CardScale
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import com.omenight.bright.ui.glass.WallpaperBaker
-import com.omenight.bright.ui.glass.glass
-import com.omenight.bright.ui.glass.rimBrush
+import com.omenight.bright.ui.wallpaper.WallpaperBaker
 import com.omenight.bright.ui.theme.BrightColors
 import kotlin.math.roundToInt
 
@@ -65,7 +64,7 @@ fun BrightCard(
     modifier: Modifier = Modifier,
     cardModifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
-    glassBackground: Boolean = false,
+    surfaceBackground: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -122,13 +121,13 @@ fun BrightCard(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .then(if (glassBackground) Modifier.glass(TileCorner, rim = false) else Modifier)
+                    .then(if (surfaceBackground) Modifier.surface(TileCorner) else Modifier)
                     .drawWithContent {
                         drawContent()
                         if (press > 0f) drawRect(Color.White.copy(alpha = 0.10f * press))
                         val stroke = 1.dp.toPx()
                         drawRoundRect(
-                            brush = rimBrush(size, rimStrength),
+                            brush = edgeLight(size, rimStrength),
                             topLeft = Offset(stroke / 2, stroke / 2),
                             size = size.copy(width = size.width - stroke, height = size.height - stroke),
                             cornerRadius = CornerRadius(TileCorner.toPx() - stroke / 2),
@@ -140,7 +139,7 @@ fun BrightCard(
         }
         Text(
             text = label,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelLarge.copy(shadow = BrightColors.TextShadow),
             color = BrightColors.Text,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -150,6 +149,15 @@ fun BrightCard(
         )
     }
 }
+
+// Edge light, bright at the top-left, fading through the middle, catching again bottom-right
+private fun edgeLight(size: Size, strength: Float): Brush = Brush.linearGradient(
+    0f to Color.White.copy(alpha = 0.55f * strength),
+    0.45f to Color.White.copy(alpha = 0.06f * strength),
+    1f to Color.White.copy(alpha = 0.22f * strength),
+    start = Offset.Zero,
+    end = Offset(size.width, size.height),
+)
 
 private class TileShadow(
     val image: ImageBitmap,

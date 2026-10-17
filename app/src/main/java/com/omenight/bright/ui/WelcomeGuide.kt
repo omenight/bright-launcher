@@ -41,7 +41,6 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.omenight.bright.R
 import com.omenight.bright.data.HomeRole
-import com.omenight.bright.ui.glass.glass
 import com.omenight.bright.ui.theme.BrightColors
 
 /** Shown once on first launch. Teaches the three things a remote user cannot discover alone. */
@@ -81,7 +80,7 @@ fun WelcomeGuide(
         Column(
             Modifier
                 .width(580.dp)
-                .glass(30.dp, tint = Color.Black.copy(alpha = 0.30f))
+                .surface(30.dp)
                 .padding(horizontal = 40.dp, vertical = 36.dp)
                 .focusProperties { onExit = { if (open) cancelFocusChange() } }
                 .focusGroup(),

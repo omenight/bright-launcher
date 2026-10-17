@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.omenight.bright.ui.LauncherRoot
-import com.omenight.bright.ui.glass.BackdropEngine
+import com.omenight.bright.ui.wallpaper.BackdropEngine
 import com.omenight.bright.ui.theme.BrightTheme
 
 class MainActivity : ComponentActivity() {

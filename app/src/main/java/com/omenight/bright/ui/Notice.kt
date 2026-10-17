@@ -15,19 +15,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
-import com.omenight.bright.ui.glass.glass
 import kotlinx.coroutines.delay
 
 /** One confirmation line, a new instance shows again even when the text repeats. */
 class NoticeMessage(val text: String)
 
-/** A short glass pill confirming an action, gone after a few seconds. Never takes focus. */
+/** A short pill confirming an action, gone after a few seconds. Never takes focus. */
 @Composable
 fun Notice(message: NoticeMessage?, modifier: Modifier = Modifier) {
     var visible by remember { mutableStateOf(false) }
@@ -51,7 +49,7 @@ fun Notice(message: NoticeMessage?, modifier: Modifier = Modifier) {
             style = TextStyle(fontSize = 16.sp, textAlign = TextAlign.Center),
             modifier = Modifier
                 .widthIn(max = 640.dp)
-                .glass(22.dp, tint = Color.Black.copy(alpha = 0.35f))
+                .surface(22.dp)
                 .padding(horizontal = 24.dp, vertical = 12.dp),
         )
     }

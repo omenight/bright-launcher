@@ -13,7 +13,7 @@ import com.omenight.bright.data.PackageListStore
 import com.omenight.bright.data.SettingsStore
 import com.omenight.bright.data.SystemWallpaper
 import com.omenight.bright.data.Updater
-import com.omenight.bright.ui.glass.WallpaperPreset
+import com.omenight.bright.ui.wallpaper.WallpaperPreset
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine

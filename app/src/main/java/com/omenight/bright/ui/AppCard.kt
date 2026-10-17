@@ -40,8 +40,8 @@ fun AppCard(
         onLongClick = onLongClick,
         modifier = modifier,
         cardModifier = cardModifier,
-        // Apps without a TV banner sit on glass instead of an empty box
-        glassBackground = art !is AppArt.Banner,
+        // Apps without a TV banner sit on a surface instead of an empty box
+        surfaceBackground = art !is AppArt.Banner,
     ) {
         when (val current = art) {
             is AppArt.Banner -> Image(
@@ -85,7 +85,7 @@ fun AllAppsCard(
         onClick = onClick,
         modifier = modifier,
         cardModifier = cardModifier,
-        glassBackground = true,
+        surfaceBackground = true,
     ) {
         GlyphIcon(Glyph.Grid, size = 32.dp, modifier = Modifier.align(Alignment.Center))
     }

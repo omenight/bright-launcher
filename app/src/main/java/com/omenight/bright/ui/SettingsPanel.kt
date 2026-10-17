@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.omenight.bright.R
 import com.omenight.bright.data.LaunchableApp
 import com.omenight.bright.data.Updater
-import com.omenight.bright.ui.glass.WallpaperPreset
+import com.omenight.bright.ui.wallpaper.WallpaperPreset
 import com.omenight.bright.ui.theme.BrightColors
 
 /**

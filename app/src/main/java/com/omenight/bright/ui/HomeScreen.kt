@@ -75,19 +75,15 @@ import com.omenight.bright.HomeViewModel
 import com.omenight.bright.R
 import com.omenight.bright.data.LaunchableApp
 import com.omenight.bright.data.Updater
-import com.omenight.bright.ui.glass.LocalBackdrop
-import com.omenight.bright.ui.glass.backdrop
-import com.omenight.bright.ui.glass.glass
-import com.omenight.bright.ui.glass.BackdropEngine
+import com.omenight.bright.ui.wallpaper.LocalBackdrop
+import com.omenight.bright.ui.wallpaper.backdrop
+import com.omenight.bright.ui.wallpaper.BackdropEngine
 import com.omenight.bright.ui.theme.BrightColors
 
 const val Columns = 5
 val CardGap = 22.dp
 val ScreenPadding = 56.dp
 
-private val DockMargin = 40.dp
-private val DockPadding = 28.dp
-private val DockCorner = 30.dp
 
 @Composable
 fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
@@ -180,14 +176,14 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
         onPauseOrDispose { }
     }
 
-    val sheet by animateFloatAsState(if (allAppsOpen) 1f else 0f, tween(240), label = "sheet")
+    val dim by animateFloatAsState(if (allAppsOpen) 1f else 0f, tween(240), label = "dim")
 
     CompositionLocalProvider(LocalBackdrop provides backdrop) {
         Box(
             Modifier
                 .fillMaxSize()
                 // Read inside the lambda so the fade only redraws, never recomposes
-                .backdrop(backdrop, fallback = BrightColors.Background) { sheet }
+                .backdrop(backdrop, fallback = BrightColors.Background) { dim }
                 .onPreviewKeyEvent { event ->
                     val menu = event.key == Key.Menu && event.type == KeyEventType.KeyUp && !allAppsOpen && !showWelcome
                     if (menu) {
@@ -375,29 +371,28 @@ private fun HomeScreen(
             }
         }
 
-        // The glass dock, the one large glass surface on home
+        // Favorites sit straight on the wallpaper, lined up with the clock and the All apps grid
         Column(
             Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(start = DockMargin, end = DockMargin, bottom = 32.dp)
-                .glass(DockCorner),
+                .padding(bottom = 28.dp),
         ) {
             if (state.loaded && state.favorites.isEmpty()) {
                 Text(
                     text = stringResource(R.string.favorites_empty),
                     color = BrightColors.TextMuted,
                     style = TextStyle(fontSize = 14.sp, shadow = BrightColors.TextShadow),
-                    modifier = Modifier.padding(start = DockPadding, top = 20.dp),
+                    modifier = Modifier.padding(start = ScreenPadding),
                 )
             }
             BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val cardWidth = (maxWidth - DockPadding * 2 - CardGap * (Columns - 1)) / Columns
+                val cardWidth = (maxWidth - ScreenPadding * 2 - CardGap * (Columns - 1)) / Columns
                 // Padding lives inside the row so focused tiles can lift and cast shadow without clipping.
                 // Full width too, a lazy row clips along its axis and would cut the last tile's shadow.
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(start = DockPadding, end = DockPadding, top = 24.dp, bottom = 10.dp),
+                    contentPadding = PaddingValues(start = ScreenPadding, end = ScreenPadding, top = 24.dp, bottom = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(CardGap),
                 ) {
                     items(state.favorites, key = { it.packageName }) { app ->

@@ -9,8 +9,8 @@ import android.graphics.Paint
 import android.graphics.Shader
 import android.os.Build
 import androidx.core.graphics.scale
-import com.omenight.bright.ui.glass.WallpaperBaker
-import com.omenight.bright.ui.glass.WallpaperPreset
+import com.omenight.bright.ui.wallpaper.WallpaperBaker
+import com.omenight.bright.ui.wallpaper.WallpaperPreset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

@@ -1,21 +1,15 @@
-package com.omenight.bright.ui.glass
+package com.omenight.bright.ui.wallpaper
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.RadialGradient
 import android.graphics.Shader
 import androidx.core.graphics.createBitmap
-import androidx.core.graphics.scale
 import kotlin.random.Random
 
-/**
- * Produces the backdrop bitmaps once, on the CPU. Glass surfaces sample these instead of
- * blurring the screen every frame, which low-end TV GPUs (and anything below API 31) cannot do.
- */
+/** Renders wallpapers and other soft bitmaps once, on the CPU, so nothing is blurred per frame. */
 internal object WallpaperBaker {
     private const val WIDTH = 320
     private const val HEIGHT = 180
@@ -38,25 +32,6 @@ internal object WallpaperBaker {
         return boxBlur(bitmap, radius = 4, passes = 2)
     }
 
-    /** The frosted version glass shows, heavily blurred and more saturated (Apple's "vibrancy"). */
-    fun frost(source: Bitmap): Bitmap {
-        val small = source.scale(source.width / 2, source.height / 2)
-        val blurred = boxBlur(small, radius = 6, passes = 3)
-        val out = createBitmap(blurred.width, blurred.height)
-        val paint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
-            colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(1.4f) })
-        }
-        Canvas(out).drawBitmap(blurred, 0f, 0f, paint)
-        return out
-    }
-
-    fun darken(source: Bitmap, amount: Float): Bitmap {
-        val out = source.copy(Bitmap.Config.ARGB_8888, true)
-        Canvas(out).drawColor((amount * 255).toInt() shl 24)
-        return out
-    }
-
-    /** A small tileable noise texture that hides gradient banding on 8-bit TV panels. */
     fun grain(size: Int = 128): Bitmap {
         val random = Random(seed = 7)
         val pixels = IntArray(size * size) {
