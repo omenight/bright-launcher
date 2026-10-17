@@ -18,8 +18,8 @@ To go back to the stock launcher, run `set-home-activity` again with its compone
 
 - **OK** opens an app.
 - **Hold OK** opens the app menu: add to or remove from Favorites, hide it, or open its system app info.
-- **Menu**, or **Up** to the gear and **OK**, opens settings with Wallpaper, Hidden apps, System settings and the Bright version row. In the wallpaper list, moving over one previews it, **OK** keeps it and **Back** returns to the menu.
-- Bright checks GitHub releases every few hours and downloads a new version in the background. A dot on the gear means it is ready, the **Bright** row in settings installs it. The first install asks you to allow Bright as an app source.
+- **Menu**, or **Up** to the gear and **OK**, opens settings with Wallpaper, Hidden apps, System settings and About. In the wallpaper list, moving over one previews it, **OK** keeps it and **Back** returns to the menu.
+- Bright checks GitHub releases every few hours and downloads a new version in the background. A dot on the gear means it is ready, **About**, **Updates** in settings installs it. The first install asks you to allow Bright as an app source.
 - On first launch a short guide explains these and offers to make Bright the default home.
 
 ## Building

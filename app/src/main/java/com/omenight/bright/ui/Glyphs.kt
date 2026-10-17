@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.Dp
 import com.omenight.bright.ui.theme.BrightColors
 
 /** Bright's few icons, drawn in code so the APK ships no icon font or vector set. */
-enum class Glyph { Chevron, Gear, Grid, Hide, House, Info, Pin, Update }
+enum class Glyph { Chevron, Gear, Grid, Hide, House, Info, Pin }
 
 @Composable
 fun GlyphIcon(glyph: Glyph, size: Dp, modifier: Modifier = Modifier, color: Color = BrightColors.Text) {
@@ -33,7 +33,6 @@ fun GlyphIcon(glyph: Glyph, size: Dp, modifier: Modifier = Modifier, color: Colo
             Glyph.House -> house(color)
             Glyph.Info -> info(color)
             Glyph.Pin -> drawCircle(color, radius = this.size.minDimension * 0.18f)
-            Glyph.Update -> update(color)
         }
     }
 }
@@ -110,21 +109,6 @@ private fun DrawScope.house(color: Color) {
         lineTo(w * 0.25f, w * 0.82f)
         lineTo(w * 0.75f, w * 0.82f)
         lineTo(w * 0.75f, w * 0.40f)
-    }
-    drawPath(path, color, style = Stroke(width = w * 0.08f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-}
-
-// An arrow down onto a shelf
-private fun DrawScope.update(color: Color) {
-    val w = size.width
-    val path = Path().apply {
-        moveTo(w * 0.50f, w * 0.16f)
-        lineTo(w * 0.50f, w * 0.64f)
-        moveTo(w * 0.30f, w * 0.44f)
-        lineTo(w * 0.50f, w * 0.64f)
-        lineTo(w * 0.70f, w * 0.44f)
-        moveTo(w * 0.20f, w * 0.84f)
-        lineTo(w * 0.80f, w * 0.84f)
     }
     drawPath(path, color, style = Stroke(width = w * 0.08f, cap = StrokeCap.Round, join = StrokeJoin.Round))
 }

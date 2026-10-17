@@ -62,6 +62,7 @@ fun SettingsPanel(
         Page.Menu -> R.string.settings
         Page.Wallpaper -> R.string.wallpaper
         Page.Hidden -> R.string.hidden_apps
+        Page.About -> R.string.about
     }
     SidePanel(stringResource(title), open, modifier) {
         when (page) {
@@ -71,17 +72,18 @@ fun SettingsPanel(
                 onOpenWallpapers = { page = Page.Wallpaper },
                 onOpenHidden = { page = Page.Hidden },
                 onOpenSystemSettings = onOpenSystemSettings,
-                update = update,
+                onOpenAbout = { page = Page.About },
+                updateReady = update is Updater.State.Ready,
                 version = version,
-                onUpdate = onUpdate,
             )
             Page.Wallpaper -> WallpaperPage(current, onPreview, onSelect)
             Page.Hidden -> HiddenPage(hidden, onUnhide)
+            Page.About -> AboutPage(version, update, onUpdate)
         }
     }
 }
 
-private enum class Page { Menu, Wallpaper, Hidden }
+private enum class Page { Menu, Wallpaper, Hidden, About }
 
 @Composable
 private fun MenuPage(
@@ -90,9 +92,9 @@ private fun MenuPage(
     onOpenWallpapers: () -> Unit,
     onOpenHidden: () -> Unit,
     onOpenSystemSettings: () -> Unit,
-    update: Updater.State,
+    onOpenAbout: () -> Unit,
+    updateReady: Boolean,
     version: String,
-    onUpdate: () -> Unit,
 ) {
     val firstRow = remember { FocusRequester() }
     RequestFocusOnEnter(firstRow, ready = true)
@@ -129,12 +131,37 @@ private fun MenuPage(
         leading = { RowGlyph(Glyph.Gear) },
         trailing = { Chevron() },
     )
+    PanelRow(
+        title = stringResource(R.string.about),
+        onClick = onOpenAbout,
+        leading = { RowGlyph(Glyph.Info) },
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Same dot as on the gear, it leads to the waiting update
+                if (updateReady) Box(Modifier.size(7.dp).background(BrightColors.Text, CircleShape)) else RowValue(version)
+                Chevron()
+            }
+        },
+    )
+}
+
+@Composable
+private fun AboutPage(version: String, update: Updater.State, onUpdate: () -> Unit) {
+    val updateRow = remember { FocusRequester() }
+    val versionRow = remember { FocusRequester() }
+    RequestFocusOnEnter(if (update == Updater.State.Disabled) versionRow else updateRow, ready = true)
+
+    PanelRow(
+        title = stringResource(R.string.version),
+        onClick = {},
+        modifier = Modifier.focusRequester(versionRow),
+        trailing = { RowValue(version) },
+    )
     if (update != Updater.State.Disabled) {
-        // The version is the title, so the state fits as one short word even on a 720p panel
         PanelRow(
-            title = "${stringResource(R.string.app_name)} $version",
+            title = stringResource(R.string.updates),
             onClick = onUpdate,
-            leading = { RowGlyph(Glyph.Update) },
+            modifier = Modifier.focusRequester(updateRow),
             trailing = { RowValue(updateValue(update)) },
         )
     }

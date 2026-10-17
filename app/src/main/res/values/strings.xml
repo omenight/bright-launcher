@@ -30,12 +30,15 @@
     <string name="notice_favorite_removed">Removed from favorites: %1$s</string>
     <string name="notice_hidden">Hidden: %1$s. Bring it back in Settings, Hidden apps.</string>
     <string name="notice_unhidden">Back in All apps: %1$s</string>
-    <string name="update_check">Check</string>
+    <string name="about">About</string>
+    <string name="version">Version</string>
+    <string name="updates">Updates</string>
+    <string name="update_check">Check now</string>
     <string name="update_checking">Checking</string>
-    <string name="update_up_to_date">Latest</string>
+    <string name="update_up_to_date">Up to date</string>
     <string name="update_downloading">Downloading</string>
     <string name="update_install">Install %1$s</string>
     <string name="update_installing">Installing</string>
     <string name="update_failed">Failed</string>
-    <string name="notice_update_ready">Bright %1$s is ready. Install it from Settings.</string>
+    <string name="notice_update_ready">Bright %1$s is ready. Install it in Settings, About.</string>
 </resources>
