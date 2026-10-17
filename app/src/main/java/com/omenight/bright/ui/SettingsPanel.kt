@@ -130,21 +130,22 @@ private fun MenuPage(
         trailing = { Chevron() },
     )
     if (update != Updater.State.Disabled) {
+        // The version is the title, so the state fits as one short word even on a 720p panel
         PanelRow(
-            title = stringResource(R.string.updates),
+            title = "${stringResource(R.string.app_name)} $version",
             onClick = onUpdate,
             leading = { RowGlyph(Glyph.Update) },
-            trailing = { RowValue(updateValue(update, version)) },
+            trailing = { RowValue(updateValue(update)) },
         )
     }
 }
 
 @Composable
-private fun updateValue(update: Updater.State, version: String): String = when (update) {
-    Updater.State.Disabled, Updater.State.Idle -> version
+private fun updateValue(update: Updater.State): String = when (update) {
+    Updater.State.Disabled, Updater.State.Idle -> stringResource(R.string.update_check)
     Updater.State.Checking -> stringResource(R.string.update_checking)
-    Updater.State.UpToDate -> stringResource(R.string.update_up_to_date, version)
-    is Updater.State.Downloading -> stringResource(R.string.update_downloading, update.version)
+    Updater.State.UpToDate -> stringResource(R.string.update_up_to_date)
+    is Updater.State.Downloading -> stringResource(R.string.update_downloading)
     is Updater.State.Ready -> stringResource(R.string.update_install, update.version)
     is Updater.State.Installing -> stringResource(R.string.update_installing)
     Updater.State.Failed -> stringResource(R.string.update_failed)

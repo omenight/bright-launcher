@@ -29,12 +29,12 @@
     <string name="notice_favorite_removed">Убрано из избранного: %1$s</string>
     <string name="notice_hidden">Скрыто: %1$s. Вернуть можно в настройках, раздел «Скрытые приложения».</string>
     <string name="notice_unhidden">Снова в списке: %1$s</string>
-    <string name="updates">Обновления</string>
+    <string name="update_check">Проверить</string>
     <string name="update_checking">Проверка</string>
-    <string name="update_up_to_date">%1$s, последняя версия</string>
-    <string name="update_downloading">Загрузка %1$s</string>
+    <string name="update_up_to_date">Актуальна</string>
+    <string name="update_downloading">Загрузка</string>
     <string name="update_install">Установить %1$s</string>
     <string name="update_installing">Установка</string>
-    <string name="update_failed">Ошибка, повторите</string>
-    <string name="notice_update_ready">Bright %1$s готов к установке. Установить можно в настройках, раздел «Обновления».</string>
+    <string name="update_failed">Ошибка</string>
+    <string name="notice_update_ready">Bright %1$s готов к установке. Установить можно в настройках.</string>
 </resources>

@@ -118,5 +118,11 @@ fun RowGlyph(glyph: Glyph) {
 
 @Composable
 fun RowValue(text: String) {
-    Text(text = text, color = BrightColors.TextMuted, style = TextStyle(fontSize = 15.sp))
+    Text(
+        text = text,
+        color = BrightColors.TextMuted,
+        style = TextStyle(fontSize = 15.sp),
+        maxLines = 1,
+        modifier = Modifier.padding(start = 12.dp),
+    )
 }
