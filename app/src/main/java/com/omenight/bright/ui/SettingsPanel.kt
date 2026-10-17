@@ -2,122 +2,152 @@ package com.omenight.bright.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.tv.material3.ClickableSurfaceDefaults
-import androidx.tv.material3.Surface
-import androidx.tv.material3.Text
 import com.omenight.bright.R
+import com.omenight.bright.data.LaunchableApp
+import com.omenight.bright.data.Updater
 import com.omenight.bright.ui.glass.WallpaperPreset
-import com.omenight.bright.ui.glass.glass
 import com.omenight.bright.ui.theme.BrightColors
 
 /**
- * Side panel opened by the gear or the Menu key. The menu leads to the wallpaper list and the
+ * Side panel opened by the gear or the Menu key. The menu leads to one page per option and to the
  * system settings. Focusing a wallpaper previews it on the real background; OK keeps it.
  */
 @Composable
 fun SettingsPanel(
     current: WallpaperPreset,
-    /** False while the panel animates out, so focus can return to home during the exit. */
+    hidden: List<LaunchableApp>,
     open: Boolean,
     /** Called with null when focus leaves the wallpapers, so the saved one shows again. */
     onPreview: (WallpaperPreset?) -> Unit,
     onSelect: (WallpaperPreset) -> Unit,
+    onUnhide: (LaunchableApp) -> Unit,
     onOpenSystemSettings: () -> Unit,
+    update: Updater.State,
+    version: String,
+    onUpdate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var page by remember { mutableStateOf(Page.Menu) }
-    // Registered after the root handlers, so Back in the list returns to the menu instead of closing
-    BackHandler(enabled = open && page == Page.Wallpaper) {
+    // Registered after the root handlers, so Back on a page returns to the menu instead of closing
+    BackHandler(enabled = open && page != Page.Menu) {
         onPreview(null)
         page = Page.Menu
     }
+    // The last hidden app was brought back, an empty page would leave nothing to focus
+    if (page == Page.Hidden && hidden.isEmpty()) page = Page.Menu
 
-    Column(
-        modifier
-            .fillMaxHeight()
-            .width(360.dp)
-            .padding(24.dp)
-            .glass(28.dp, tint = Color.Black.copy(alpha = 0.28f))
-            .padding(horizontal = 16.dp, vertical = 28.dp)
-            // Keeps D-pad focus inside the panel, the home screen behind it is not reachable
-            .focusProperties { onExit = { if (open) cancelFocusChange() } }
-            .focusGroup(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(
-            text = stringResource(if (page == Page.Menu) R.string.settings else R.string.wallpaper),
-            style = TextStyle(fontSize = 26.sp, fontWeight = FontWeight.Light, shadow = BrightColors.TextShadow),
-            modifier = Modifier.padding(start = 12.dp),
-        )
-        Spacer(Modifier.height(20.dp))
+    val title = when (page) {
+        Page.Menu -> R.string.settings
+        Page.Wallpaper -> R.string.wallpaper
+        Page.Hidden -> R.string.hidden_apps
+    }
+    SidePanel(stringResource(title), open, modifier) {
         when (page) {
-            Page.Menu -> MenuPage(current, onOpenWallpapers = { page = Page.Wallpaper }, onOpenSystemSettings)
+            Page.Menu -> MenuPage(
+                current = current,
+                hiddenCount = hidden.size,
+                onOpenWallpapers = { page = Page.Wallpaper },
+                onOpenHidden = { page = Page.Hidden },
+                onOpenSystemSettings = onOpenSystemSettings,
+                update = update,
+                version = version,
+                onUpdate = onUpdate,
+            )
             Page.Wallpaper -> WallpaperPage(current, onPreview, onSelect)
+            Page.Hidden -> HiddenPage(hidden, onUnhide)
         }
     }
 }
 
-private enum class Page { Menu, Wallpaper }
+private enum class Page { Menu, Wallpaper, Hidden }
 
 @Composable
-private fun MenuPage(current: WallpaperPreset, onOpenWallpapers: () -> Unit, onOpenSystemSettings: () -> Unit) {
+private fun MenuPage(
+    current: WallpaperPreset,
+    hiddenCount: Int,
+    onOpenWallpapers: () -> Unit,
+    onOpenHidden: () -> Unit,
+    onOpenSystemSettings: () -> Unit,
+    update: Updater.State,
+    version: String,
+    onUpdate: () -> Unit,
+) {
     val firstRow = remember { FocusRequester() }
     RequestFocusOnEnter(firstRow, ready = true)
 
-    SettingsRow(
+    PanelRow(
         title = stringResource(R.string.wallpaper),
         onClick = onOpenWallpapers,
         modifier = Modifier.focusRequester(firstRow),
         leading = { Swatch(current) },
         trailing = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(current.title),
-                    color = BrightColors.TextMuted,
-                    style = TextStyle(fontSize = 15.sp),
-                )
+                RowValue(stringResource(current.title))
                 Chevron()
             }
         },
     )
-    SettingsRow(
+    // Only shown once something is hidden, the page would otherwise be empty
+    if (hiddenCount > 0) {
+        PanelRow(
+            title = stringResource(R.string.hidden_apps),
+            onClick = onOpenHidden,
+            leading = { RowGlyph(Glyph.Hide) },
+            trailing = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RowValue(hiddenCount.toString())
+                    Chevron()
+                }
+            },
+        )
+    }
+    PanelRow(
         title = stringResource(R.string.system_settings),
         onClick = onOpenSystemSettings,
-        leading = { GlyphIcon(Glyph.Gear, size = 24.dp, color = BrightColors.TextMuted) },
+        leading = { RowGlyph(Glyph.Gear) },
         trailing = { Chevron() },
     )
+    if (update != Updater.State.Disabled) {
+        PanelRow(
+            title = stringResource(R.string.updates),
+            onClick = onUpdate,
+            leading = { RowGlyph(Glyph.Update) },
+            trailing = { RowValue(updateValue(update, version)) },
+        )
+    }
+}
+
+@Composable
+private fun updateValue(update: Updater.State, version: String): String = when (update) {
+    Updater.State.Disabled, Updater.State.Idle -> version
+    Updater.State.Checking -> stringResource(R.string.update_checking)
+    Updater.State.UpToDate -> stringResource(R.string.update_up_to_date, version)
+    is Updater.State.Downloading -> stringResource(R.string.update_downloading, update.version)
+    is Updater.State.Ready -> stringResource(R.string.update_install, update.version)
+    is Updater.State.Installing -> stringResource(R.string.update_installing)
+    Updater.State.Failed -> stringResource(R.string.update_failed)
 }
 
 @Composable
@@ -130,7 +160,7 @@ private fun WallpaperPage(
     RequestFocusOnEnter(currentRow, ready = true)
 
     WallpaperPreset.entries.forEach { preset ->
-        SettingsRow(
+        PanelRow(
             title = stringResource(preset.title),
             onFocused = { onPreview(preset) },
             onClick = { onSelect(preset) },
@@ -146,47 +176,27 @@ private fun WallpaperPage(
 }
 
 @Composable
-private fun Chevron() {
-    GlyphIcon(Glyph.Chevron, size = 20.dp, color = BrightColors.TextMuted, modifier = Modifier.padding(start = 4.dp))
-}
+private fun HiddenPage(hidden: List<LaunchableApp>, onUnhide: (LaunchableApp) -> Unit) {
+    val rows = remember { TileFocus() }
+    // The row that takes focus once the one just brought back disappears
+    var next by remember { mutableStateOf(hidden.firstOrNull()?.packageName) }
+    LaunchedEffect(hidden) {
+        withFrameNanos { }
+        next?.let { runCatching { rows.existing(it)?.requestFocus() } }
+    }
 
-@Composable
-private fun SettingsRow(
-    title: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    leading: @Composable () -> Unit,
-    trailing: (@Composable () -> Unit)? = null,
-    onFocused: () -> Unit = {},
-) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .onFocusChanged { if (it.isFocused) onFocused() },
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(14.dp)),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = Color.Transparent,
-            focusedContainerColor = Color.White.copy(alpha = 0.14f),
-            pressedContainerColor = Color.White.copy(alpha = 0.20f),
-            contentColor = BrightColors.Text,
-            focusedContentColor = BrightColors.Text,
-        ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
-    ) {
-        Row(
-            Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            leading()
-            Text(
-                text = title,
-                style = TextStyle(fontSize = 17.sp),
-                modifier = Modifier
-                    .padding(start = 14.dp)
-                    .weight(1f),
+    val showLabel = stringResource(R.string.show_app)
+    Column(Modifier.verticalScroll(rememberScrollState())) {
+        hidden.forEachIndexed { index, app ->
+            PanelRow(
+                title = app.label,
+                onClick = {
+                    next = (hidden.getOrNull(index + 1) ?: hidden.getOrNull(index - 1))?.packageName
+                    onUnhide(app)
+                },
+                modifier = Modifier.focusRequester(rows[app.packageName]),
+                trailing = { RowValue(showLabel) },
             )
-            trailing?.invoke()
         }
     }
 }

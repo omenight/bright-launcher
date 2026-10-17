@@ -11,17 +11,25 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import com.omenight.bright.HomeState
 import com.omenight.bright.HomeViewModel
 import com.omenight.bright.R
+import com.omenight.bright.data.LaunchableApp
 
 @Composable
-fun AllAppsScreen(state: HomeState, viewModel: HomeViewModel) {
-    val firstApp = remember { FocusRequester() }
-    RequestFocusOnEnter(firstApp, state.apps.isNotEmpty())
+fun AllAppsScreen(
+    state: HomeState,
+    viewModel: HomeViewModel,
+    onAppMenu: (LaunchableApp) -> Unit,
+    refocusApp: String?,
+    refocusEpoch: Int,
+) {
+    val tiles = remember { TileFocus() }
+    val firstApp = state.apps.firstOrNull()?.let { tiles[it.packageName] }
+    if (firstApp != null) RequestFocusOnEnter(firstApp, ready = true)
+    RefocusAfterMenu(tiles, refocusApp, refocusEpoch, fallback = firstApp)
 
     // The frosted sheet behind this screen is painted by the root backdrop, not here
     Column(Modifier.fillMaxSize()) {
@@ -39,8 +47,8 @@ fun AllAppsScreen(state: HomeState, viewModel: HomeViewModel) {
                     isFavorite = app.packageName in state.favoritePackages,
                     loadArt = viewModel::art,
                     onClick = { viewModel.launch(app) },
-                    onLongClick = { viewModel.toggleFavorite(app) },
-                    cardModifier = if (app == state.apps.first()) Modifier.focusRequester(firstApp) else Modifier,
+                    onLongClick = { onAppMenu(app) },
+                    cardModifier = Modifier.focusRequester(tiles[app.packageName]),
                 )
             }
         }

@@ -21,10 +21,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -51,6 +53,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +73,8 @@ import androidx.tv.material3.Text
 import com.omenight.bright.HomeState
 import com.omenight.bright.HomeViewModel
 import com.omenight.bright.R
+import com.omenight.bright.data.LaunchableApp
+import com.omenight.bright.data.Updater
 import com.omenight.bright.ui.glass.LocalBackdrop
 import com.omenight.bright.ui.glass.backdrop
 import com.omenight.bright.ui.glass.glass
@@ -89,6 +94,7 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val wallpaper by viewModel.wallpaper.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val resources = LocalResources.current
     val backdrop by remember { BackdropEngine.start(context) }.collectAsStateWithLifecycle()
     var allAppsOpen by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
@@ -102,6 +108,22 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
     var returnedFromAllApps by remember { mutableStateOf(false) }
     // Bumped when an overlay closes, so home takes focus back
     var homeFocusEpoch by remember { mutableIntStateOf(0) }
+    // The app whose menu is shown, kept after closing so the exit animation still has it
+    var menuApp by remember { mutableStateOf<LaunchableApp?>(null) }
+    var menuOpen by remember { mutableStateOf(false) }
+    // The tile that takes focus back once the app menu closes, bumped epoch triggers the move
+    var refocusApp by remember { mutableStateOf<String?>(null) }
+    var refocusEpoch by remember { mutableIntStateOf(0) }
+    var notice by remember { mutableStateOf<NoticeMessage?>(null) }
+    val update by viewModel.update.collectAsStateWithLifecycle()
+    // Announced once per version, the dot on the gear stays as the reminder
+    var announcedUpdate by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(update) {
+        val ready = update as? Updater.State.Ready ?: return@LaunchedEffect
+        if (announcedUpdate == ready.version) return@LaunchedEffect
+        announcedUpdate = ready.version
+        notice = NoticeMessage(resources.getString(R.string.notice_update_ready, ready.version))
+    }
     val closeAllApps = {
         if (allAppsOpen) returnedFromAllApps = true
         allAppsOpen = false
@@ -110,6 +132,21 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
         welcomeDismissed = true
         viewModel.finishWelcome()
         homeFocusEpoch++
+    }
+    val openAppMenu = { app: LaunchableApp ->
+        menuApp = app
+        menuOpen = true
+    }
+    val closeAppMenu = { focus: String? ->
+        menuOpen = false
+        refocusApp = focus
+        refocusEpoch++
+    }
+    // The tile next to [app] on the current screen, for when [app] is about to leave it
+    val neighbor = { app: LaunchableApp ->
+        val list = if (allAppsOpen) state.apps else state.favorites
+        val index = list.indexOf(app)
+        (list.getOrNull(index + 1) ?: list.getOrNull(index - 1))?.packageName
     }
     val closeSettings = {
         if (settingsOpen) {
@@ -123,6 +160,7 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
     val activity = LocalActivity.current as? ComponentActivity
     DisposableEffect(activity) {
         val listener = Consumer<Intent> {
+            menuOpen = false
             closeSettings()
             closeAllApps()
         }
@@ -135,6 +173,7 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
     // Registered later, so it wins while the panel is open
     BackHandler(enabled = settingsOpen) { closeSettings() }
     BackHandler(enabled = showWelcome) { dismissWelcome() }
+    BackHandler(enabled = menuOpen) { closeAppMenu(menuApp?.packageName) }
 
     LifecycleResumeEffect(viewModel) {
         viewModel.onResume()
@@ -152,7 +191,9 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
                 .onPreviewKeyEvent { event ->
                     val menu = event.key == Key.Menu && event.type == KeyEventType.KeyUp && !allAppsOpen && !showWelcome
                     if (menu) {
-                        if (settingsOpen) {
+                        if (menuOpen) {
+                            closeAppMenu(menuApp?.packageName)
+                        } else if (settingsOpen) {
                             closeSettings()
                         } else {
                             settingsFromGear = false
@@ -168,7 +209,7 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
                 label = "screen",
             ) { showAllApps ->
                 if (showAllApps) {
-                    AllAppsScreen(state, viewModel)
+                    AllAppsScreen(state, viewModel, openAppMenu, refocusApp, refocusEpoch)
                 } else {
                     HomeScreen(
                         state = state,
@@ -176,6 +217,10 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
                         focusAllApps = returnedFromAllApps,
                         focusEpoch = homeFocusEpoch,
                         focusGear = settingsFromGear,
+                        updateReady = update is Updater.State.Ready,
+                        refocusApp = refocusApp,
+                        refocusEpoch = refocusEpoch,
+                        onAppMenu = openAppMenu,
                         onOpenAllApps = { allAppsOpen = true },
                         onOpenSettings = {
                             settingsFromGear = true
@@ -193,16 +238,62 @@ fun LauncherRoot(viewModel: HomeViewModel = viewModel()) {
             ) {
                 SettingsPanel(
                     current = wallpaper,
+                    hidden = state.hidden,
                     open = settingsOpen,
                     onPreview = BackdropEngine::preview,
                     onSelect = viewModel::setWallpaper,
+                    onUnhide = { app ->
+                        viewModel.unhide(app)
+                        notice = NoticeMessage(resources.getString(R.string.notice_unhidden, app.label))
+                    },
                     onOpenSystemSettings = {
                         // Closed first, so coming back from system settings lands on home
                         closeSettings()
                         viewModel.openSystemSettings()
                     },
+                    update = update,
+                    version = viewModel.version,
+                    onUpdate = viewModel::update,
                 )
             }
+
+            AnimatedVisibility(
+                visible = menuOpen,
+                enter = fadeIn(tween(220)) + slideInHorizontally(tween(260)) { it / 5 },
+                exit = fadeOut(tween(160)) + slideOutHorizontally(tween(200)) { it / 5 },
+                modifier = Modifier.align(Alignment.CenterEnd),
+            ) {
+                val app = menuApp ?: return@AnimatedVisibility
+                val isFavorite = app.packageName in state.favoritePackages
+                AppMenu(
+                    app = app,
+                    isFavorite = isFavorite,
+                    open = menuOpen,
+                    onToggleFavorite = {
+                        // Removing from the dock takes the tile away, so focus moves to its neighbour
+                        closeAppMenu(if (isFavorite && !allAppsOpen) neighbor(app) else app.packageName)
+                        viewModel.toggleFavorite(app)
+                        val text = if (isFavorite) R.string.notice_favorite_removed else R.string.notice_favorite_added
+                        notice = NoticeMessage(resources.getString(text, app.label))
+                    },
+                    onHide = {
+                        closeAppMenu(neighbor(app))
+                        viewModel.hide(app)
+                        notice = NoticeMessage(resources.getString(R.string.notice_hidden, app.label))
+                    },
+                    onAppInfo = {
+                        closeAppMenu(app.packageName)
+                        viewModel.openAppInfo(app)
+                    },
+                )
+            }
+
+            Notice(
+                notice,
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 40.dp),
+            )
 
             AnimatedVisibility(visible = showWelcome, enter = fadeIn(tween(300)), exit = fadeOut(tween(200))) {
                 WelcomeGuide(open = showWelcome, onDone = dismissWelcome)
@@ -218,18 +309,23 @@ private fun HomeScreen(
     focusAllApps: Boolean,
     focusEpoch: Int,
     focusGear: Boolean,
+    updateReady: Boolean,
+    refocusApp: String?,
+    refocusEpoch: Int,
+    onAppMenu: (LaunchableApp) -> Unit,
     onOpenAllApps: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
-    val firstFavorite = remember { FocusRequester() }
+    val tiles = remember { TileFocus() }
     val allAppsTile = remember { FocusRequester() }
     val gear = remember { FocusRequester() }
     val initialFocus = when {
         focusGear && focusEpoch > 0 -> gear
         focusAllApps || state.favorites.isEmpty() -> allAppsTile
-        else -> firstFavorite
+        else -> tiles[state.favorites.first().packageName]
     }
     RequestFocusOnEnter(initialFocus, state.loaded, key = focusEpoch)
+    RefocusAfterMenu(tiles, refocusApp, refocusEpoch, fallback = allAppsTile)
 
     Box(Modifier.fillMaxSize()) {
         Clock(
@@ -264,7 +360,18 @@ private fun HomeScreen(
                 ),
                 scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
             ) {
-                GlyphIcon(Glyph.Gear, size = 26.dp, modifier = Modifier.padding(10.dp))
+                Box {
+                    GlyphIcon(Glyph.Gear, size = 26.dp, modifier = Modifier.padding(10.dp))
+                    if (updateReady) {
+                        Box(
+                            Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(6.dp)
+                                .size(9.dp)
+                                .background(BrightColors.Text, CircleShape),
+                        )
+                    }
+                }
             }
         }
 
@@ -299,13 +406,9 @@ private fun HomeScreen(
                             isFavorite = false,
                             loadArt = viewModel::art,
                             onClick = { viewModel.launch(app) },
-                            onLongClick = { viewModel.toggleFavorite(app) },
+                            onLongClick = { onAppMenu(app) },
                             modifier = Modifier.width(cardWidth),
-                            cardModifier = if (app == state.favorites.first()) {
-                                Modifier.focusRequester(firstFavorite)
-                            } else {
-                                Modifier
-                            },
+                            cardModifier = Modifier.focusRequester(tiles[app.packageName]),
                         )
                     }
                     item(key = "all-apps") {
@@ -318,6 +421,26 @@ private fun HomeScreen(
                 }
             }
         }
+    }
+}
+
+/** One focus requester per package, made on first use so lazy rows and grids can address any item. */
+class TileFocus {
+    private val requesters = HashMap<String, FocusRequester>()
+
+    operator fun get(packageName: String): FocusRequester = requesters.getOrPut(packageName) { FocusRequester() }
+
+    fun existing(packageName: String): FocusRequester? = requesters[packageName]
+}
+
+/** Puts focus back on the tile of [app] after the app menu closes, or on [fallback] when that tile is gone. */
+@Composable
+fun RefocusAfterMenu(tiles: TileFocus, app: String?, epoch: Int, fallback: FocusRequester?) {
+    LaunchedEffect(epoch) {
+        if (epoch == 0) return@LaunchedEffect
+        withFrameNanos { }
+        val target = app?.let(tiles::existing) ?: fallback ?: return@LaunchedEffect
+        runCatching { target.requestFocus() }
     }
 }
 

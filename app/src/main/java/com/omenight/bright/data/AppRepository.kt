@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -75,6 +76,15 @@ class AppRepository(private val context: Context) {
     /** Opens the device's own settings app, false on the rare box that has none. */
     fun openSystemSettings(): Boolean = try {
         context.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+    } catch (_: ActivityNotFoundException) {
+        false
+    }
+
+    /** Opens the system details screen of [app], where it can be stopped, cleared or uninstalled. */
+    fun openAppInfo(app: LaunchableApp): Boolean = try {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", app.packageName, null))
+        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         true
     } catch (_: ActivityNotFoundException) {
         false

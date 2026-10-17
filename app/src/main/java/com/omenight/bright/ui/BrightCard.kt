@@ -1,7 +1,5 @@
 package com.omenight.bright.ui
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -15,9 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -28,7 +24,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -60,8 +55,8 @@ private val ShadowBlur = 14.dp
 private val ShadowDrop = 4.dp
 
 /**
- * The one tile style used everywhere. Focus lifts the tile with a real shadow, brightens its
- * specular rim and sweeps a glint across it once. The label shows only while focused.
+ * The one tile style used everywhere. Focus lifts the tile with a real shadow and brightens its
+ * specular rim. The label shows only while focused.
  */
 @Composable
 fun BrightCard(
@@ -76,15 +71,6 @@ fun BrightCard(
     var focused by remember { mutableStateOf(false) }
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    // Apps can take seconds to open on slow boxes, so a click replays the glint as an acknowledgement
-    var clicks by remember { mutableIntStateOf(0) }
-    val glint = remember { Animatable(1f) }
-    LaunchedEffect(focused, clicks) {
-        if (focused) {
-            glint.snapTo(0f)
-            glint.animateTo(1f, tween(durationMillis = 1100, easing = FastOutSlowInEasing))
-        }
-    }
     val rimStrength by animateFloatAsState(if (focused) 1f else 0.45f, label = "rim")
     val labelAlpha by animateFloatAsState(if (focused) 1f else 0f, label = "label")
     val lift by animateFloatAsState(if (focused) 1f else 0f, tween(180), label = "lift")
@@ -94,10 +80,7 @@ fun BrightCard(
     // Lifted above its neighbours so the shadow is not covered by the next tile
     Column(modifier.zIndex(if (focused) 1f else 0f)) {
         Card(
-            onClick = {
-                clicks++
-                onClick()
-            },
+            onClick = onClick,
             onLongClick = onLongClick,
             interactionSource = interaction,
             modifier = cardModifier
@@ -143,21 +126,6 @@ fun BrightCard(
                     .drawWithContent {
                         drawContent()
                         if (press > 0f) drawRect(Color.White.copy(alpha = 0.10f * press))
-                        val t = glint.value
-                        if (t < 1f) {
-                            // A diagonal band of light travelling left to right
-                            val x = size.width * (-0.4f + t * 1.8f)
-                            val band = size.width * 0.35f
-                            drawRect(
-                                Brush.linearGradient(
-                                    0f to Color.Transparent,
-                                    0.5f to Color.White.copy(alpha = 0.22f),
-                                    1f to Color.Transparent,
-                                    start = Offset(x - band, 0f),
-                                    end = Offset(x + band, size.height),
-                                ),
-                            )
-                        }
                         val stroke = 1.dp.toPx()
                         drawRoundRect(
                             brush = rimBrush(size, rimStrength),

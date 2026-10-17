@@ -17,6 +17,11 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Mirrors Bright's wallpaper into the system one that TV settings shows, granted at install -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
+    <!-- Self-update from GitHub releases. Installing still needs the user to allow Bright as an app source -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Lets Android 12+ install Bright's own update without the confirm screen -->
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
 
     <!-- Package visibility on Android 11+, scoped to launchable apps instead of QUERY_ALL_PACKAGES -->
     <queries>
@@ -55,5 +60,9 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".data.UpdateReceiver"
+            android:exported="false" />
     </application>
 </manifest>
